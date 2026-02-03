@@ -241,31 +241,50 @@
             const [currentEpiSelection, setCurrentEpiSelection] = useState({ id: '', qty: 1 });
             const [deliveryCart, setDeliveryCart] = useState([]);
 
+            // 1. Auth e Dados
             useEffect(() => {
-                auth.signInAnonymously().catch(console.error);
-                return auth.onAuthStateChanged(u => {
-                    setUser(u);
-                    if(!u) setLoading(false);
-                });
+                const initAuth = async () => {
+                    try { 
+                        if (auth) await auth.signInAnonymously(); 
+                    } catch(e) { 
+                        console.error("Erro login anônimo:", e);
+                        // ALERTA VISUAL PARA O UTILIZADOR
+                        alert("Atenção: A autenticação anônima falhou.\n\nSe esta é a primeira vez que usa o sistema, vá à consola do Firebase > Authentication > Sign-in method e ative 'Anonymous'.\n\nSe as regras da base de dados forem públicas, o sistema tentará funcionar mesmo assim.");
+                    }
+                };
+                initAuth();
+                if (auth) return auth.onAuthStateChanged(setUser);
             }, []);
 
             useEffect(() => {
-                if (!user) return;
+                // Tenta carregar dados mesmo sem utilizador (para casos de regras públicas ou erro de auth)
+                if (!db) return;
+                
                 const unsubEmp = db.collection('artifacts').doc(appId).collection('employees').onSnapshot(s => 
-                    setEmployees(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                    setEmployees(s.docs.map(d => ({id: d.id, ...d.data()}))),
+                    err => console.error("Erro ao carregar colaboradores:", err)
+                );
                 
                 const unsubInv = db.collection('artifacts').doc(appId).collection('inventory').onSnapshot(s => 
-                    setInventory(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                    setInventory(s.docs.map(d => ({id: d.id, ...d.data()}))),
+                    err => console.error("Erro ao carregar stock:", err)
+                );
                 
                 const unsubDel = db.collection('artifacts').doc(appId).collection('deliveries').onSnapshot(s => {
                     const data = s.docs.map(d => ({id: d.id, ...d.data()}));
                     setDeliveries(data.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
                     setLoading(false);
-                    document.getElementById('initial-loader').style.display = 'none';
+                    const loader = document.getElementById('initial-loader');
+                    if(loader) loader.style.display = 'none';
+                }, err => {
+                    console.error("Erro ao carregar entregas:", err);
+                    setLoading(false);
+                    const loader = document.getElementById('initial-loader');
+                    if(loader) loader.style.display = 'none';
                 });
 
                 return () => { unsubEmp(); unsubInv(); unsubDel(); };
-            }, [user]);
+            }, [user]); // Reage a mudanças de user, mas não bloqueia se for null
 
             // Funções
             const deleteItem = async (col, id) => {
@@ -324,8 +343,8 @@
 
             const signPendingDelivery = async (signature) => {
                 if (!pendingDeliveryToSign) return;
-                await db.collection('artifacts').doc(appId).collection('deliveries').doc(pendingDeliveryToSign.id)
-                    .update({ signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                const delRef = doc(db, 'artifacts', appId, 'public', 'data', 'deliveries', pendingDeliveryToSign.id);
+                await updateDoc(delRef, { signature, status: 'signed', signedAt: Timestamp.now() });
                 setSignatureModalOpen(false); setPendingDeliveryToSign(null);
             };
 
