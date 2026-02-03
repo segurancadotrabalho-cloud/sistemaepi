@@ -5,13 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI PRO - Sistema de Gestão</title>
     
-    <!-- 1. Tailwind CSS (Estilos) -->
+    <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 2. Babel (Para entender React no navegador) -->
+    <!-- 2. React & ReactDOM (Versão Global/UMD) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 3. Babel Standalone (Para JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Estilos de impressão e scroll -->
+    <!-- 4. Firebase (Versão Compatibilidade Web) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
     <style>
         @media print {
             body * { visibility: hidden; }
@@ -19,40 +27,68 @@
             .print-content { position: absolute; left: 0; top: 0; width: 100%; }
             .no-print { display: none !important; }
         }
-        /* Scrollbar personalizada */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        #initial-loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #f3f4f6; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 9999;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #e2e8f0;
+            border-top: 5px solid #2563eb; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
+
+    <div id="initial-loader">
+        <div class="spinner mb-4"></div>
+        <h2 class="text-xl font-bold text-gray-700">A carregar sistema...</h2>
+    </div>
     
-    <!-- Onde o App vai ser renderizado -->
     <div id="root"></div>
 
-    <!-- 3. O Código do App -->
-    <script type="text/babel" data-type="module">
-        // Importações via CDN (Sem Node.js)
-        import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18.2.0';
-        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-        
-        // Ícones Lucide
-        import { 
-            UserPlus, Package, ClipboardCheck, FileText, Plus, Download, Trash2, 
-            CheckCircle, Menu, X, User, ShieldCheck, Search, Upload, ArrowLeft, 
-            Printer, AlertTriangle, ShoppingCart, MinusCircle, PenLine, Clock 
-        } from 'https://esm.sh/lucide-react@0.292.0';
+    <!-- Script Principal -->
+    <script type="text/babel">
+        // --- 1. CONFIGURAÇÃO DE ÍCONES (SVG Inline para evitar erros de import) ---
+        const Icons = {
+            UserPlus: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>,
+            Package: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
+            ClipboardCheck: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M9 3v2a3 3 0 0 0 6 0V3"/><path d="m9 14 2 2 4-4"/></svg>,
+            FileText: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+            Plus: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+            Download: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+            Trash2: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+            CheckCircle: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+            Menu: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+            X: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+            User: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+            ShieldCheck: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,
+            Search: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+            Upload: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+            ArrowLeft: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
+            Printer: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
+            AlertTriangle: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+            ShoppingCart: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,
+            MinusCircle: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
+            PenLine: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
+            Clock: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+            FlaskConical: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2v7.31"/><path d="M14 2v7.31"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-9.32 0L6 9.3"/><path d="M10 2v7.31"/></svg>,
+            DatabaseZap: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 15 21.84"/><path d="M21 5V8"/><path d="M21 12L13 22l2-5h-4l8-10v5h4l-2 5"/></svg>
+        };
 
-        // Firebase Imports (Modular Web v9+)
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-        import { 
-            getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, 
-            onSnapshot, query, Timestamp, getDocs 
-        } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+        const Icon = ({ name, size = 24, className }) => {
+            const Ico = Icons[name];
+            return Ico ? <Ico width={size} height={size} className={className} /> : null;
+        };
 
-        // --- CONFIGURAÇÃO FIREBASE ---
+        // --- 2. CONFIGURAÇÃO FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyDX7Tlvz3g9cbQW01IMYsEp3GQ9B825aYI",
             authDomain: "episystem-30cae.firebaseapp.com",
@@ -62,13 +98,16 @@
             appId: "1:1088262046750:web:6d6250e1d1cd020ade5a0f"
         };
 
-        // Inicialização
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = 'episystem-production-v1';
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const appId = 'episystem-prod-v2';
 
-        // --- COMPONENTE MODAL ---
+        // Variáveis React Globais
+        const { useState, useEffect, useRef } = React;
+
+        // --- 3. COMPONENTES DO APP ---
+
         const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-2xl" }) => {
             if (!isOpen) return null;
             return (
@@ -76,7 +115,9 @@
                     <div className={`bg-white w-full ${maxWidth} rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]`}>
                         <div className="p-6 bg-blue-600 text-white flex justify-between items-center shrink-0">
                             <h4 className="font-bold text-xl flex items-center gap-2 tracking-tight">{title}</h4>
-                            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-full transition-colors"><X size={24} /></button>
+                            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-full transition-colors">
+                                <Icon name="X" size={24} />
+                            </button>
                         </div>
                         <div className="p-8 overflow-y-auto">
                             {children}
@@ -86,35 +127,30 @@
             );
         };
 
-        // --- COMPONENTE DE ASSINATURA ---
         const SignaturePad = ({ onSave, onCancel }) => {
             const canvasRef = useRef(null);
 
             useEffect(() => {
+                // Delay para garantir renderização do modal
                 const timer = setTimeout(() => {
                     const canvas = canvasRef.current;
                     if (!canvas) return;
-                    
                     const ctx = canvas.getContext('2d');
                     const ratio = window.devicePixelRatio || 1;
                     const rect = canvas.getBoundingClientRect();
-                    
                     if (rect.width === 0) return;
-
                     canvas.width = rect.width * ratio;
                     canvas.height = rect.height * ratio;
-                    
                     ctx.scale(ratio, ratio);
                     ctx.lineWidth = 3;
                     ctx.lineCap = 'round';
                     ctx.strokeStyle = '#000';
-                }, 100);
+                }, 200);
                 return () => clearTimeout(timer);
             }, []);
 
             const getPos = (e) => {
                 const canvas = canvasRef.current;
-                if (!canvas) return { x: 0, y: 0 };
                 const rect = canvas.getBoundingClientRect();
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -173,14 +209,13 @@
                         <button onClick={clear} className="px-6 py-3 text-red-600 hover:bg-red-50 rounded-xl font-bold border border-red-100">Limpar</button>
                         <div className="flex gap-2">
                             <button onClick={onCancel} className="px-6 py-3 text-gray-500 hover:bg-gray-100 rounded-xl font-bold">Cancelar</button>
-                            <button onClick={handleSave} className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg active:scale-95 transition-all">Confirmar Assinatura</button>
+                            <button onClick={handleSave} className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg active:scale-95 transition-all">Confirmar</button>
                         </div>
                     </div>
                 </div>
             );
         };
 
-        // --- APLICAÇÃO PRINCIPAL ---
         function App() {
             const [user, setUser] = useState(null);
             const [view, setView] = useState('dashboard');
@@ -190,14 +225,12 @@
             const [loading, setLoading] = useState(true);
             const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-            // Importação e Seleção
-            const [selectedEmployees, setSelectedEmployees] = useState([]);
-            const [selectedInventory, setSelectedInventory] = useState([]);
+            // Import e Seleção
             const [showImportEmployees, setShowImportEmployees] = useState(false);
             const [showImportInventory, setShowImportInventory] = useState(false);
             const [importText, setImportText] = useState('');
 
-            // Relatórios e Modais
+            // Modais
             const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState(null);
             const [isDeliveryModalOpen, setDeliveryModalOpen] = useState(false);
             const [isSignatureModalOpen, setSignatureModalOpen] = useState(false);
@@ -208,48 +241,53 @@
             const [currentEpiSelection, setCurrentEpiSelection] = useState({ id: '', qty: 1 });
             const [deliveryCart, setDeliveryCart] = useState([]);
 
-            // 1. Auth e Dados
             useEffect(() => {
-                const initAuth = async () => {
-                    try { await signInAnonymously(auth); } catch(e) { console.error(e); }
-                };
-                initAuth();
-                return onAuthStateChanged(auth, setUser);
+                auth.signInAnonymously().catch(console.error);
+                return auth.onAuthStateChanged(u => {
+                    setUser(u);
+                    if(!u) setLoading(false);
+                });
             }, []);
 
             useEffect(() => {
                 if (!user) return;
-                const unsubEmp = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), 
-                    s => setEmployees(s.docs.map(d => ({id: d.id, ...d.data()}))));
-                const unsubInv = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), 
-                    s => setInventory(s.docs.map(d => ({id: d.id, ...d.data()}))));
-                const unsubDel = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'deliveries'), 
-                    s => {
-                        const data = s.docs.map(d => ({id: d.id, ...d.data()}));
-                        setDeliveries(data.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
-                        setLoading(false);
-                    });
+                const unsubEmp = db.collection('artifacts').doc(appId).collection('employees').onSnapshot(s => 
+                    setEmployees(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                
+                const unsubInv = db.collection('artifacts').doc(appId).collection('inventory').onSnapshot(s => 
+                    setInventory(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                
+                const unsubDel = db.collection('artifacts').doc(appId).collection('deliveries').onSnapshot(s => {
+                    const data = s.docs.map(d => ({id: d.id, ...d.data()}));
+                    setDeliveries(data.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
+                    setLoading(false);
+                    document.getElementById('initial-loader').style.display = 'none';
+                });
+
                 return () => { unsubEmp(); unsubInv(); unsubDel(); };
             }, [user]);
 
             // Funções
             const deleteItem = async (col, id) => {
                 if(confirm("Excluir item permanentemente?")) 
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
+                    await db.collection('artifacts').doc(appId).collection(col).doc(id).delete();
             };
 
             const handleImport = async (type) => {
                 const lines = importText.split('\n').filter(l => l.trim());
-                for (const line of lines) {
+                const batch = db.batch();
+                const colRef = db.collection('artifacts').doc(appId).collection(type);
+
+                lines.forEach(line => {
                     const p = line.split(/[,;\t]/).map(s => s.trim());
-                    try {
-                        if (type === 'employees' && p.length >= 3) {
-                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), { name: p[0], role: p[1], sector: p[2], createdAt: Timestamp.now() });
-                        } else if (type === 'inventory' && p.length >= 4) {
-                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), { name: p[0], complement: p[1], ca: p[2], quantity: parseInt(p[3]) || 0, createdAt: Timestamp.now() });
-                        }
-                    } catch(e) { console.error(e); }
-                }
+                    const docRef = colRef.doc();
+                    if (type === 'employees' && p.length >= 3) {
+                        batch.set(docRef, { name: p[0], role: p[1], sector: p[2], createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    } else if (type === 'inventory' && p.length >= 4) {
+                        batch.set(docRef, { name: p[0], complement: p[1], ca: p[2], quantity: parseInt(p[3]) || 0, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    }
+                });
+                await batch.commit();
                 setImportText(''); setShowImportEmployees(false); setShowImportInventory(false);
             };
 
@@ -263,62 +301,90 @@
             const processDeliveryBatch = async (signature = null) => {
                 const employee = employees.find(e => e.id === deliveryEmployeeId);
                 if (!employee || deliveryCart.length === 0) return;
-                try {
-                    for (const item of deliveryCart) {
-                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'deliveries'), {
-                            employeeId: employee.id, employeeName: employee.name, employeeRole: employee.role, employeeSector: employee.sector,
-                            epiId: item.id, epiName: item.name, epiCA: item.ca, quantityDelivered: item.qty,
-                            signature: signature, status: signature ? 'signed' : 'pending', createdAt: Timestamp.now()
-                        });
-                        const epiRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', item.id);
-                        await updateDoc(epiRef, { quantity: item.quantity - item.qty });
-                    }
-                    setDeliveryCart([]); setDeliveryEmployeeId(''); setDeliveryModalOpen(false); setSignatureModalOpen(false);
-                    if (signature) { setSelectedEmployeeForReport(employee); setView('reports'); }
-                    else { setView('pending-signatures'); }
-                } catch(e) { console.error(e); }
+                
+                const batch = db.batch();
+                
+                deliveryCart.forEach(item => {
+                    const delRef = db.collection('artifacts').doc(appId).collection('deliveries').doc();
+                    batch.set(delRef, {
+                        employeeId: employee.id, employeeName: employee.name, employeeRole: employee.role, employeeSector: employee.sector,
+                        epiId: item.id, epiName: item.name, epiCA: item.ca, quantityDelivered: item.qty,
+                        signature: signature, status: signature ? 'signed' : 'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    const invRef = db.collection('artifacts').doc(appId).collection('inventory').doc(item.id);
+                    batch.update(invRef, { quantity: item.quantity - item.qty });
+                });
+
+                await batch.commit();
+                setDeliveryCart([]); setDeliveryEmployeeId(''); setDeliveryModalOpen(false); setSignatureModalOpen(false);
+                if (signature) { setSelectedEmployeeForReport(employee); setView('reports'); }
+                else { setView('pending-signatures'); }
             };
 
             const signPendingDelivery = async (signature) => {
                 if (!pendingDeliveryToSign) return;
-                const delRef = doc(db, 'artifacts', appId, 'public', 'data', 'deliveries', pendingDeliveryToSign.id);
-                await updateDoc(delRef, { signature, status: 'signed', signedAt: Timestamp.now() });
+                await db.collection('artifacts').doc(appId).collection('deliveries').doc(pendingDeliveryToSign.id)
+                    .update({ signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
                 setSignatureModalOpen(false); setPendingDeliveryToSign(null);
             };
 
-            // Layout
-            const NavItem = ({ icon: Icon, label, viewId, count = 0 }) => (
+            // Test Data
+            const seedTestData = async () => {
+                setLoading(true);
+                const batch = db.batch();
+                const empRef = db.collection('artifacts').doc(appId).collection('employees');
+                const invRef = db.collection('artifacts').doc(appId).collection('inventory');
+                
+                [{name: "João Silva", role: "Soldador", sector: "Manutenção"}, {name: "Maria Oliveira", role: "Eletricista", sector: "Obras"}]
+                    .forEach(e => batch.set(empRef.doc(), {...e, createdAt: firebase.firestore.FieldValue.serverTimestamp()}));
+                
+                [{name: "Luva de Raspa", complement: "Punho 20", ca: "12345", quantity: 50}, {name: "Óculos Proteção", complement: "Incolor", ca: "67890", quantity: 30}]
+                    .forEach(i => batch.set(invRef.doc(), {...i, createdAt: firebase.firestore.FieldValue.serverTimestamp()}));
+                
+                await batch.commit();
+                setLoading(false);
+            };
+
+            const clearDatabase = async () => {
+                if(!confirm("Apagar tudo?")) return;
+                alert("Para limpar, delete o projeto no console do Firebase ou exclua os itens manualmente. (Segurança)");
+            };
+
+            const NavItem = ({ icon, label, viewId, count = 0 }) => (
                 <button onClick={() => { setView(viewId); setSidebarOpen(false); setSelectedEmployeeForReport(null); }} className={`flex items-center justify-between w-full p-3 rounded-xl transition-all ${view === viewId ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-600 hover:bg-blue-50'}`}>
-                    <div className="flex items-center space-x-3"><Icon size={20} /><span className="font-bold">{label}</span></div>
+                    <div className="flex items-center space-x-3"><Icon name={icon} size={20} /><span className="font-bold">{label}</span></div>
                     {count > 0 && <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{count}</span>}
                 </button>
             );
 
-            if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+            if (loading) return null;
 
             return (
                 <div className="flex h-screen bg-gray-100 font-sans text-gray-900 overflow-hidden">
                     <aside className={`fixed inset-0 z-50 lg:static lg:flex flex-col w-72 bg-white border-r border-gray-200 p-6 transform transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
                         <div className="flex items-center justify-between mb-10">
-                            <h1 className="text-2xl font-black text-blue-800 flex items-center gap-2 tracking-tighter"><ShieldCheck size={32} /> EPI PRO</h1>
-                            <button className="lg:hidden" onClick={() => setSidebarOpen(false)}><X /></button>
+                            <h1 className="text-2xl font-black text-blue-800 flex items-center gap-2 tracking-tighter"><Icon name="ShieldCheck" size={32} /> EPI PRO</h1>
+                            <button className="lg:hidden" onClick={() => setSidebarOpen(false)}><Icon name="X" size={24} /></button>
                         </div>
                         <nav className="space-y-2 flex-1 overflow-y-auto">
-                            <NavItem icon={ClipboardCheck} label="Painel Geral" viewId="dashboard" />
-                            <NavItem icon={UserPlus} label="Colaboradores" viewId="employees" />
-                            <NavItem icon={Package} label="Estoque Central" viewId="inventory" />
-                            <NavItem icon={Clock} label="Pendências" viewId="pending-signatures" count={deliveries.filter(d => d.status === 'pending').length} />
+                            <NavItem icon="ClipboardCheck" label="Painel Geral" viewId="dashboard" />
+                            <NavItem icon="UserPlus" label="Colaboradores" viewId="employees" />
+                            <NavItem icon="Package" label="Estoque Central" viewId="inventory" />
+                            <NavItem icon="Clock" label="Pendências" viewId="pending-signatures" count={deliveries.filter(d => d.status === 'pending').length} />
                             <div className="pt-4 border-t border-gray-100 mt-4 space-y-2">
-                                <button onClick={() => setDeliveryModalOpen(true)} className="flex items-center gap-2 w-full p-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg active:scale-95"><Plus size={20} /> Nova Entrega</button>
-                                <NavItem icon={FileText} label="Fichas Individuais" viewId="reports" />
+                                <button onClick={() => setDeliveryModalOpen(true)} className="flex items-center gap-2 w-full p-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg active:scale-95"><Icon name="Plus" size={20} /> Nova Entrega</button>
+                                <NavItem icon="FileText" label="Fichas Individuais" viewId="reports" />
                             </div>
                         </nav>
-                        <div className="mt-auto pt-6 border-t border-gray-100 text-xs text-gray-400 text-center"><p>Versão Web 3.0</p></div>
+                        <div className="mt-auto pt-6 border-t border-gray-100 mt-8">
+                            <NavItem icon="FlaskConical" label="Modo de Teste" viewId="test-center" />
+                        </div>
                     </aside>
 
                     <main className="flex-1 flex flex-col overflow-hidden bg-white/50 backdrop-blur-sm">
                         <header className="h-20 border-b border-gray-200 flex items-center justify-between px-8 bg-white/80 no-print">
-                            <button className="lg:hidden" onClick={() => setSidebarOpen(true)}><Menu /></button>
+                            <button className="lg:hidden" onClick={() => setSidebarOpen(true)}><Icon name="Menu" /></button>
                             <h2 className="text-xl font-black uppercase tracking-tighter">{view.replace('-', ' ')}</h2>
                             <div className="bg-gray-100 px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold text-gray-500"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> Online</div>
                         </header>
@@ -327,27 +393,15 @@
                             {view === 'dashboard' && (
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {[
-                                        { label: 'Colaboradores', val: employees.length, color: 'bg-blue-500', icon: User },
-                                        { label: 'Itens Estoque', val: inventory.length, color: 'bg-green-500', icon: Package },
-                                        { label: 'Entregas', val: deliveries.filter(d=>d.status==='signed').length, color: 'bg-purple-500', icon: CheckCircle }
+                                        { label: 'Colaboradores', val: employees.length, color: 'bg-blue-500', icon: "User" },
+                                        { label: 'Itens Estoque', val: inventory.length, color: 'bg-green-500', icon: "Package" },
+                                        { label: 'Entregas', val: deliveries.filter(d=>d.status==='signed').length, color: 'bg-purple-500', icon: "CheckCircle" }
                                     ].map((s, i) => (
                                         <div key={i} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 flex items-center justify-between">
                                             <div><p className="text-gray-400 font-bold uppercase text-xs">{s.label}</p><p className="text-4xl font-black mt-1">{s.val}</p></div>
-                                            <div className={`${s.color} p-5 rounded-2xl text-white shadow-lg`}><s.icon size={28} /></div>
+                                            <div className={`${s.color} p-5 rounded-2xl text-white shadow-lg`}><Icon name={s.icon} size={28} /></div>
                                         </div>
                                     ))}
-                                    <div className="md:col-span-3 bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm mt-4">
-                                        <h3 className="text-xl font-black mb-6 flex items-center gap-2 text-red-700 uppercase"><AlertTriangle size={24}/> Alertas de Estoque</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                            {inventory.filter(i => i.quantity < 5).map(item => (
-                                                <div key={item.id} className="p-4 bg-red-50 border-2 border-red-100 rounded-2xl flex justify-between items-center">
-                                                    <div><p className="font-black text-red-800">{item.name}</p><p className="text-[10px] font-black uppercase opacity-60">CA: {item.ca}</p></div>
-                                                    <span className="text-2xl font-black text-red-600">{item.quantity}</span>
-                                                </div>
-                                            ))}
-                                            {inventory.filter(i => i.quantity < 5).length === 0 && <p className="text-gray-400 italic font-bold">Estoque saudável.</p>}
-                                        </div>
-                                    </div>
                                 </div>
                             )}
 
@@ -355,7 +409,7 @@
                                 <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden">
                                     <div className="p-8 border-b border-gray-100 flex justify-between items-center">
                                         <h3 className="text-2xl font-black tracking-tighter">{view === 'employees' ? 'Colaboradores' : 'Estoque Central'}</h3>
-                                        <button onClick={() => view === 'employees' ? setShowImportEmployees(true) : setShowImportInventory(true)} className="bg-gray-100 px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-gray-200"><Upload size={18} /> Importar</button>
+                                        <button onClick={() => view === 'employees' ? setShowImportEmployees(true) : setShowImportInventory(true)} className="bg-gray-100 px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-gray-200"><Icon name="Upload" size={18} /> Importar</button>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left">
@@ -372,7 +426,7 @@
                                                         <td className="px-8 py-5 font-black text-gray-800">{item.name}</td>
                                                         <td className="px-8 py-5 font-bold text-gray-400 text-sm">{view === 'employees' ? `${item.role} • ${item.sector}` : `CA: ${item.ca} | ${item.complement}`}</td>
                                                         <td className="px-8 py-5 text-center">
-                                                            {view === 'employees' ? <button onClick={() => deleteItem('employees', item.id)} className="text-red-300 hover:text-red-600"><Trash2 size={20}/></button> : <span className={`px-4 py-1.5 rounded-full font-black text-xs ${item.quantity < 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>{item.quantity}</span>}
+                                                            {view === 'employees' ? <button onClick={() => deleteItem('employees', item.id)} className="text-red-300 hover:text-red-600"><Icon name="Trash2" size={20}/></button> : <span className={`px-4 py-1.5 rounded-full font-black text-xs ${item.quantity < 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>{item.quantity}</span>}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -384,17 +438,13 @@
 
                             {view === 'pending-signatures' && (
                                 <div className="space-y-6">
-                                    <div className="bg-blue-50 p-8 rounded-[40px] border border-blue-100">
-                                        <h3 className="text-2xl font-black text-blue-900">Assinaturas Aguardando</h3>
-                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {deliveries.filter(d => d.status === 'pending').map(del => (
                                             <div key={del.id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex justify-between items-center">
                                                 <div><p className="font-black text-lg text-gray-800">{del.employeeName}</p><p className="text-sm font-bold text-blue-600">{del.epiName} (x{del.quantityDelivered})</p></div>
-                                                <button onClick={() => { setPendingDeliveryToSign(del); setSignatureModalOpen(true); }} className="bg-blue-600 text-white p-4 rounded-2xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2"><PenLine size={20}/> Assinar</button>
+                                                <button onClick={() => { setPendingDeliveryToSign(del); setSignatureModalOpen(true); }} className="bg-blue-600 text-white p-4 rounded-2xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2"><Icon name="PenLine" size={20}/> Assinar</button>
                                             </div>
                                         ))}
-                                        {deliveries.filter(d => d.status === 'pending').length === 0 && <div className="md:col-span-2 text-center p-20 text-gray-300 font-black uppercase">Nenhuma pendência</div>}
                                     </div>
                                 </div>
                             )}
@@ -405,7 +455,7 @@
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {employees.map(emp => (
                                                 <button key={emp.id} onClick={() => setSelectedEmployeeForReport(emp)} className="p-8 bg-white rounded-[32px] border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-500 transition-all text-left flex items-center gap-6 group">
-                                                    <div className="h-16 w-16 bg-gray-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-inner"><User size={28}/></div>
+                                                    <div className="h-16 w-16 bg-gray-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-inner"><Icon name="User" size={28}/></div>
                                                     <div><p className="font-black text-xl">{emp.name}</p><p className="text-xs font-bold text-gray-400 uppercase">{emp.role}</p></div>
                                                 </button>
                                             ))}
@@ -413,8 +463,8 @@
                                     ) : (
                                         <div className="bg-white rounded-[40px] shadow-2xl border border-gray-100 overflow-hidden print-content">
                                             <div className="p-6 bg-gray-50 border-b flex justify-between items-center no-print">
-                                                <button onClick={() => setSelectedEmployeeForReport(null)} className="flex items-center gap-2 text-blue-600 font-black text-xs uppercase"><ArrowLeft size={18}/> Voltar</button>
-                                                <button onClick={() => window.print()} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 shadow-lg"><Printer size={18}/> Imprimir</button>
+                                                <button onClick={() => setSelectedEmployeeForReport(null)} className="flex items-center gap-2 text-blue-600 font-black text-xs uppercase"><Icon name="ArrowLeft" size={18}/> Voltar</button>
+                                                <button onClick={() => window.print()} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 shadow-lg"><Icon name="Printer" size={18}/> Imprimir</button>
                                             </div>
                                             <div className="p-12 md:p-16 space-y-8 bg-white">
                                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-4 border-black pb-6 gap-6">
@@ -425,7 +475,7 @@
                                                     </div>
                                                 </div>
                                                 <div className="bg-gray-50 border-l-4 border-blue-600 p-4 text-xs font-medium text-gray-600 mb-6 text-justify">
-                                                    <p className="font-black text-blue-900 uppercase mb-1 flex items-center gap-2"><ShieldCheck size={14}/> Termo de Responsabilidade:</p>
+                                                    <p className="font-black text-blue-900 uppercase mb-1 flex items-center gap-2"><Icon name="ShieldCheck" size={14}/> Termo de Responsabilidade:</p>
                                                     <p>Declaro ter recebido os equipamentos listados abaixo em perfeito estado de conservação, assumindo o compromisso de utilizá-los obrigatoriamente durante minha jornada de trabalho e zelar pela guarda dos mesmos, ciente das normas da NR 06.</p>
                                                 </div>
                                                 <table className="w-full border-collapse">
@@ -453,6 +503,16 @@
                                     )}
                                 </div>
                             )}
+
+                            {view === 'test-center' && (
+                                <div className="max-w-xl mx-auto space-y-4">
+                                    <div className="bg-orange-50 border-2 border-orange-200 p-12 rounded-[48px] text-center">
+                                        <Icon name="FlaskConical" className="mx-auto mb-6 text-orange-600" size={64} />
+                                        <h3 className="text-3xl font-black tracking-tighter uppercase mb-4 text-orange-900">Teste</h3>
+                                        <button onClick={seedTestData} className="w-full bg-orange-600 text-white py-5 rounded-3xl font-black text-xl flex items-center justify-center gap-4 hover:bg-orange-700 transition-all shadow-xl uppercase"><Icon name="DatabaseZap" size={24}/> Gerar Dados</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </main>
 
@@ -467,7 +527,7 @@
                                     </select>
                                 </div>
                                 <div className="bg-blue-50/50 p-8 rounded-[40px] border-4 border-dashed border-blue-100">
-                                    <h4 className="font-black text-blue-900 mb-6 uppercase text-sm tracking-widest flex items-center gap-2"><ShoppingCart size={20}/> Adicionar Item</h4>
+                                    <h4 className="font-black text-blue-900 mb-6 uppercase text-sm tracking-widest flex items-center gap-2"><Icon name="ShoppingCart" size={20}/> Adicionar Item</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div className="md:col-span-3">
                                             <select className="w-full p-5 border-2 rounded-2xl bg-white font-black border-gray-100 outline-none" value={currentEpiSelection.id} onChange={e => setCurrentEpiSelection({...currentEpiSelection, id: e.target.value})}>
@@ -485,7 +545,7 @@
                                             {deliveryCart.map(item => (
                                                 <div key={item.id} className="p-5 bg-white flex justify-between items-center">
                                                     <div><p className="font-black text-lg">{item.name}</p><p className="text-[10px] font-black uppercase text-gray-400">Qtd: {item.qty}</p></div>
-                                                    <button onClick={() => setDeliveryCart(deliveryCart.filter(c=>c.id!==item.id))} className="text-red-300 hover:text-red-600 p-2"><MinusCircle size={24}/></button>
+                                                    <button onClick={() => setDeliveryCart(deliveryCart.filter(c=>c.id!==item.id))} className="text-red-300 hover:text-red-600 p-2"><Icon name="MinusCircle" size={24}/></button>
                                                 </div>
                                             ))}
                                         </div>
@@ -516,7 +576,7 @@
             );
         }
 
-        const root = createRoot(document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
 </body>
