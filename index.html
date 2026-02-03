@@ -146,7 +146,7 @@
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden p-8 text-center space-y-6">
                         <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto"><Icon name="Lock" size={32} /></div>
-                        <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações.</p></div>
+                        <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações. Verifique as regras.</p></div>
                         <div className="bg-slate-50 p-4 rounded-xl text-left text-sm space-y-2 border border-slate-200">
                             <p><strong>Para corrigir o erro de "Excluir" ou "Salvar":</strong></p>
                             <p>1. Vá ao Console Firebase > Firestore Database > Rules.</p>
@@ -163,7 +163,6 @@
             const [search, setSearch] = useState('');
             const [isOpen, setIsOpen] = useState(false);
             const wrapperRef = useRef(null);
-            
             const filtered = options.filter(opt => opt.label.toLowerCase().includes(search.toLowerCase()));
 
             useEffect(() => {
@@ -268,11 +267,25 @@
             const [pass, setPass] = useState('');
             const [error, setError] = useState('');
             const [loading, setLoading] = useState(false);
+            const [rememberMe, setRememberMe] = useState(false);
 
             const handleLogin = async (e) => {
-                e.preventDefault(); setLoading(true); setError('');
-                try { await auth.signInWithEmailAndPassword(email, pass); } 
-                catch(e) { setLoading(false); setError("Dados inválidos ou erro de rede."); }
+                e.preventDefault(); 
+                setLoading(true); 
+                setError('');
+                
+                try {
+                    // Configurar persistência com base no checkbox
+                    const persistence = rememberMe 
+                        ? firebase.auth.Auth.Persistence.LOCAL 
+                        : firebase.auth.Auth.Persistence.SESSION;
+                    
+                    await auth.setPersistence(persistence);
+                    await auth.signInWithEmailAndPassword(email, pass);
+                } catch(e) { 
+                    setLoading(false); 
+                    setError("Dados inválidos ou erro de rede."); 
+                }
             };
 
             return (
@@ -285,6 +298,10 @@
                         <form onSubmit={handleLogin} className="space-y-4">
                             <div><label className="text-xs font-bold text-slate-600 uppercase">Email</label><input type="email" required className="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500" value={email} onChange={e=>setEmail(e.target.value)} /></div>
                             <div><label className="text-xs font-bold text-slate-600 uppercase">Senha</label><input type="password" required className="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500" value={pass} onChange={e=>setPass(e.target.value)} /></div>
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" id="remember" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="rounded border-gray-300 text-brand-700 focus:ring-brand-500"/>
+                                <label htmlFor="remember" className="text-sm text-slate-600">Manter-me conectado</label>
+                            </div>
                             {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center">{error}</div>}
                             <button type="submit" disabled={loading} className="w-full py-3 bg-brand-700 text-white rounded-lg font-bold shadow-md flex justify-center items-center gap-2">{loading ? '...' : <><Icon name="LogIn" size={18}/> Entrar</>}</button>
                         </form>
@@ -303,21 +320,26 @@
             const [permissionError, setPermissionError] = useState(false);
             const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-            // Modais
-            const [modals, setModals] = useState({ import: false, addEmp: false, addInv: false, addStock: false, delivery: false, sign: false });
-            // FIXED: Ensure all state properties are defined initially to prevent ReferenceError
-            const [data, setData] = useState({ 
-                importType: '', 
-                importText: '', 
-                newEmp: {name:'', role:'', sector:''}, 
-                newInv: {name:'', ca:'', quantity:0}, 
-                stock: {id:'', curr:0, add:''}, 
-                deliveryEmp:'', 
-                cart:[], 
-                signPending:null, 
-                report:null 
-            });
+            // Modais (State restaurado corretamente)
+            const [showImportModal, setShowImportModal] = useState(false);
+            const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
+            const [showAddInventoryModal, setShowAddInventoryModal] = useState(false);
+            const [showStockAddModal, setShowStockAddModal] = useState(false);
+            const [isDeliveryModalOpen, setDeliveryModalOpen] = useState(false);
+            const [isSignatureModalOpen, setSignatureModalOpen] = useState(false);
+
+            // Dados
+            const [importType, setImportType] = useState(null);
+            const [importText, setImportText] = useState('');
+            const [newEmployee, setNewEmployee] = useState({ name: '', role: '', sector: '' });
+            const [newInventory, setNewInventory] = useState({ name: '', complement: '', ca: '', quantity: 0 });
+            const [stockToAdd, setStockToAdd] = useState({ id: '', current: 0, add: '' });
+            
+            const [deliveryEmployeeId, setDeliveryEmployeeId] = useState('');
             const [currentEpiSelection, setCurrentEpiSelection] = useState({ id: '', qty: 1 });
+            const [deliveryCart, setDeliveryCart] = useState([]);
+            const [pendingDeliveryToSign, setPendingDeliveryToSign] = useState(null);
+            const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState(null);
 
             useEffect(() => {
                 const unsub = auth.onAuthStateChanged(u => {
@@ -337,8 +359,6 @@
             }, [user]);
 
             // Handlers
-            const toggleModal = (name, val) => setModals(prev => ({...prev, [name]: val}));
-            
             const handleDelete = async (col, id) => {
                 if(!confirm("Tem a certeza?")) return;
                 try { await db.collection('artifacts').doc(appId).collection(col).doc(id).delete(); }
@@ -347,47 +367,32 @@
 
             const handleAddEmployee = async () => {
                 try {
-                    await db.collection('artifacts').doc(appId).collection('employees').add({...data.newEmp, createdAt: new Date()});
-                    toggleModal('addEmp', false); setData(p=>({...p, newEmp:{name:'', role:'', sector:''}}));
+                    await db.collection('artifacts').doc(appId).collection('employees').add({...newEmployee, createdAt: new Date()});
+                    setShowAddEmployeeModal(false); setNewEmployee({name:'', role:'', sector:''});
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
             const handleAddInventory = async () => {
-                // Check duplicate
-                if(inventory.some(i => i.name.trim().toLowerCase() === data.newInv.name.trim().toLowerCase() && i.ca === data.newInv.ca)) {
-                    return alert("Item duplicado (Nome + CA já existem).");
-                }
+                if(inventory.some(i => i.name === newInventory.name && i.ca === newInventory.ca)) return alert("Item já existe!");
                 try {
-                    await db.collection('artifacts').doc(appId).collection('inventory').add({...data.newInv, quantity: +data.newInv.quantity, createdAt: new Date()});
-                    toggleModal('addInv', false); setData(p=>({...p, newInv:{name:'', ca:'', quantity:0}}));
+                    await db.collection('artifacts').doc(appId).collection('inventory').add({...newInventory, quantity: +newInventory.quantity, createdAt: new Date()});
+                    setShowAddInventoryModal(false); setNewInventory({name:'', ca:'', quantity:0});
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
             const handleAddStock = async () => {
                 try {
-                    await db.collection('artifacts').doc(appId).collection('inventory').doc(data.stock.id).update({ quantity: data.stock.curr + +data.stock.add });
-                    toggleModal('addStock', false);
+                    await db.collection('artifacts').doc(appId).collection('inventory').doc(stockToAdd.id).update({ quantity: stockToAdd.current + +stockToAdd.add });
+                    setShowStockAddModal(false);
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
-            const addToCart = () => {
-                if(!currentEpiSelection.id) return alert("Selecione um EPI.");
-                const epi = inventory.find(i => i.id === currentEpiSelection.id);
-                if (!epi || epi.quantity < currentEpiSelection.qty) return alert("Estoque insuficiente.");
-                if (data.cart.some(i => i.id === epi.id)) return alert("Item já está na lista.");
-                
-                // Add to cart state
-                const newItem = { ...epi, qty: parseInt(currentEpiSelection.qty) };
-                setData(p => ({ ...p, cart: [...p.cart, newItem] }));
-                setCurrentEpiSelection({ id: '', qty: 1 });
-            };
-
             const processDelivery = async (signature = null) => {
-                if(!data.deliveryEmp || data.cart.length === 0) return alert("Dados incompletos");
+                if(!deliveryEmployeeId || deliveryCart.length === 0) return alert("Dados incompletos");
                 try {
-                    const emp = employees.find(e => e.id === data.deliveryEmp);
+                    const emp = employees.find(e => e.id === deliveryEmployeeId);
                     const batch = db.batch();
-                    data.cart.forEach(item => {
+                    deliveryCart.forEach(item => {
                         const ref = db.collection('artifacts').doc(appId).collection('deliveries').doc();
                         batch.set(ref, {
                             employeeId: emp.id, employeeName: emp.name, employeeRole: emp.role, employeeSector: emp.sector,
@@ -398,18 +403,46 @@
                         batch.update(invRef, { quantity: item.quantity - item.qty });
                     });
                     await batch.commit();
-                    toggleModal('delivery', false); toggleModal('sign', false); setData(p=>({...p, cart:[], deliveryEmp:''}));
-                    if(signature) { setData(p=>({...p, report: emp})); setView('reports'); } else setView('pending-signatures');
+                    setDeliveryModalOpen(false); setSignatureModalOpen(false); setDeliveryCart([]); setDeliveryEmployeeId('');
+                    if(signature) { setSelectedEmployeeForReport(emp); setView('reports'); } else setView('pending-signatures');
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
             const signPendingDelivery = async (signature) => {
-                if (!data.signPending) return;
+                if (!pendingDeliveryToSign) return;
                 try {
-                    await db.collection('artifacts').doc(appId).collection('deliveries').doc(data.signPending.id)
+                    await db.collection('artifacts').doc(appId).collection('deliveries').doc(pendingDeliveryToSign.id)
                         .update({ signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
-                    toggleModal('sign', false); setData(p=>({...p, signPending:null}));
+                    setSignatureModalOpen(false); setPendingDeliveryToSign(null);
                 } catch(err) { if (err.code === 'permission-denied') setPermissionError(true); else alert("Erro: " + err.message); }
+            };
+
+            const handleImport = async () => {
+                const lines = importText.split('\n').filter(l => l.trim());
+                try {
+                    const batch = db.batch();
+                    const colRef = db.collection('artifacts').doc(appId).collection(importType);
+                    lines.forEach(line => {
+                        const p = line.split(/[,;\t]/).map(s => s.trim());
+                        const docRef = colRef.doc();
+                        if (importType === 'employees' && p.length >= 3) {
+                            batch.set(docRef, { name: p[0], role: p[1], sector: p[2], createdAt: new Date() });
+                        } else if (importType === 'inventory' && p.length >= 4) {
+                            batch.set(docRef, { name: p[0], complement: p[1], ca: p[2], quantity: parseInt(p[3]) || 0, createdAt: new Date() });
+                        }
+                    });
+                    await batch.commit();
+                    setImportText(''); setShowImportModal(false);
+                } catch (err) { if (err.code === 'permission-denied') setPermissionError(true); }
+            };
+
+            const addToCart = () => {
+                if(!currentEpiSelection.id) return alert("Selecione um EPI.");
+                const epi = inventory.find(i => i.id === currentEpiSelection.id);
+                if (!epi || epi.quantity < currentEpiSelection.qty) return alert("Estoque insuficiente.");
+                if (deliveryCart.some(i => i.id === epi.id)) return alert("Item já está na lista.");
+                setDeliveryCart([...deliveryCart, { ...epi, qty: parseInt(currentEpiSelection.qty) }]);
+                setCurrentEpiSelection({ id: '', qty: 1 });
             };
 
             const handleLogout = () => { auth.signOut(); };
@@ -418,7 +451,7 @@
             const epiOptions = inventory.filter(i => i.quantity > 0).map(i => ({ value: i.id, label: i.name, main: i.name, sub: `CA: ${i.ca} | Disp: ${i.quantity}` }));
 
             const SidebarItem = ({ icon, label, id, count }) => (
-                <button onClick={() => { setView(id); setSidebarOpen(false); setData(p=>({...p, report:null})); }} className={`flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all mb-1 ${view === id ? 'bg-brand-700 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+                <button onClick={() => { setView(id); setSidebarOpen(false); setSelectedEmployeeForReport(null); }} className={`flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all mb-1 ${view === id ? 'bg-brand-700 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
                     <div className="flex items-center gap-3"><Icon name={icon} size={18} /> {label}</div>
                     {count > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">{count}</span>}
                 </button>
@@ -439,7 +472,7 @@
                             <SidebarItem icon="UserPlus" label="Colaboradores" id="employees" />
                             <SidebarItem icon="Package" label="Estoque de EPIs" id="inventory" />
                             <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-6">Operacional</p>
-                            <button onClick={()=>toggleModal('delivery', true)} className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-brand-700 bg-brand-50 rounded-lg hover:bg-brand-100 border border-brand-100 transition-all mb-1"><Icon name="Plus" size={18} /> Nova Entrega</button>
+                            <button onClick={()=>setDeliveryModalOpen(true)} className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-brand-700 bg-brand-50 rounded-lg hover:bg-brand-100 border border-brand-100 transition-all mb-1"><Icon name="Plus" size={18} /> Nova Entrega</button>
                             <SidebarItem icon="Clock" label="Assinaturas" id="pending-signatures" count={deliveries.filter(d=>d.status==='pending').length} />
                             <SidebarItem icon="FileText" label="Relatórios" id="reports" />
                         </nav>
@@ -465,7 +498,7 @@
 
                             {view === 'employees' && (
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b border-slate-100 flex justify-between"><h3 className="font-bold text-slate-800">Lista de Colaboradores</h3><button onClick={()=>toggleModal('addEmp', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button></div>
+                                    <div className="p-6 border-b border-slate-100 flex justify-between"><h3 className="font-bold text-slate-800">Lista de Colaboradores</h3><div className="flex gap-2"><button onClick={()=>setShowAddEmployeeModal(true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button><button onClick={()=>{setImportType('employees'); setShowImportModal(true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button></div></div>
                                     <table className="w-full text-left text-sm">
                                         <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Nome</th><th className="px-6 py-4">Função</th><th className="px-6 py-4 text-right">Ações</th></tr></thead>
                                         <tbody className="divide-y divide-slate-100">{employees.map(e=><tr key={e.id} className="hover:bg-slate-50"><td className="px-6 py-4 font-medium">{e.name}</td><td className="px-6 py-4 text-slate-500">{e.role}</td><td className="px-6 py-4 text-right"><button onClick={()=>handleDelete('employees', e.id)} className="text-red-400 hover:text-red-600"><Icon name="Trash2"/></button></td></tr>)}</tbody>
@@ -475,10 +508,10 @@
 
                             {view === 'inventory' && (
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b border-slate-100 flex justify-between"><h3 className="font-bold text-slate-800">Controle de Estoque</h3><button onClick={()=>toggleModal('addInv', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo Item</button></div>
+                                    <div className="p-6 border-b border-slate-100 flex justify-between"><h3 className="font-bold text-slate-800">Controle de Estoque</h3><div className="flex gap-2"><button onClick={()=>setShowAddInventoryModal(true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo Item</button><button onClick={()=>{setImportType('inventory'); setShowImportModal(true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button></div></div>
                                     <table className="w-full text-left text-sm">
                                         <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Item</th><th className="px-6 py-4">CA</th><th className="px-6 py-4 text-center">Qtd</th><th className="px-6 py-4 text-right">Ações</th></tr></thead>
-                                        <tbody className="divide-y divide-slate-100">{inventory.map(i=><tr key={i.id} className="hover:bg-slate-50"><td className="px-6 py-4 font-medium">{i.name}</td><td className="px-6 py-4 text-slate-500">{i.ca}</td><td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-bold ${i.quantity<5?'bg-red-100 text-red-700':'bg-emerald-100 text-emerald-700'}`}>{i.quantity}</span></td><td className="px-6 py-4 text-right flex justify-end gap-2"><button onClick={()=>{setData(p=>({...p, stock:{id:i.id, curr:i.quantity, add:''}})); toggleModal('addStock', true)}} className="text-brand-600 hover:bg-brand-50 p-1 rounded"><Icon name="Plus"/></button><button onClick={()=>handleDelete('inventory', i.id)} className="text-red-400 hover:bg-red-50 p-1 rounded"><Icon name="Trash2"/></button></td></tr>)}</tbody>
+                                        <tbody className="divide-y divide-slate-100">{inventory.map(i=><tr key={i.id} className="hover:bg-slate-50"><td className="px-6 py-4 font-medium">{i.name}</td><td className="px-6 py-4 text-slate-500">{i.ca}</td><td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-bold ${i.quantity<5?'bg-red-100 text-red-700':'bg-emerald-100 text-emerald-700'}`}>{i.quantity}</span></td><td className="px-6 py-4 text-right flex justify-end gap-2"><button onClick={()=>{setStockToAdd({id:i.id, curr:i.quantity, add:''}); setShowStockAddModal(true)}} className="text-brand-600 hover:bg-brand-50 p-1 rounded"><Icon name="Plus"/></button><button onClick={()=>handleDelete('inventory', i.id)} className="text-red-400 hover:bg-red-50 p-1 rounded"><Icon name="Trash2"/></button></td></tr>)}</tbody>
                                     </table>
                                 </div>
                             )}
@@ -488,7 +521,7 @@
                                     {deliveries.filter(d=>d.status==='pending').map(del=>(
                                         <div key={del.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
                                             <div><p className="font-bold text-slate-800">{del.employeeName}</p><p className="text-sm text-slate-500">{del.epiName} (x{del.quantityDelivered})</p></div>
-                                            <button onClick={()=>{setData(p=>({...p, signPending:del})); toggleModal('sign', true)}} className="mt-auto w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-bold">Coletar Assinatura</button>
+                                            <button onClick={()=>{setPendingDeliveryToSign(del); setSignatureModalOpen(true)}} className="mt-auto w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-bold">Coletar Assinatura</button>
                                         </div>
                                     ))}
                                     {deliveries.filter(d=>d.status==='pending').length === 0 && <p className="col-span-full text-center text-slate-400 py-10">Nenhuma pendência.</p>}
@@ -497,26 +530,26 @@
 
                             {view === 'reports' && (
                                 <div>
-                                    {!data.report ? (
+                                    {!selectedEmployeeForReport ? (
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            {employees.map(e=>(<button key={e.id} onClick={()=>setData(p=>({...p, report:e}))} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all"><p className="font-bold text-slate-800">{e.name}</p><p className="text-xs text-slate-500 uppercase">{e.role}</p></button>))}
+                                            {employees.map(e=>(<button key={e.id} onClick={()=>setSelectedEmployeeForReport(e)} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all"><p className="font-bold text-slate-800">{e.name}</p><p className="text-xs text-slate-500 uppercase">{e.role}</p></button>))}
                                         </div>
                                     ) : (
                                         <div className="bg-white rounded-xl shadow-lg print-content p-10">
                                             <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-6">
                                                 <div><h1 className="text-2xl font-bold text-slate-900">FICHA DE EPI</h1><p className="text-xs font-bold text-slate-500 tracking-widest uppercase">EPI MACBOOT - SEGURANÇA</p></div>
-                                                <div className="text-right"><p className="font-bold text-lg">{data.report.name}</p><p className="text-xs text-slate-500 uppercase">{data.report.role} | {data.report.sector}</p></div>
+                                                <div className="text-right"><p className="font-bold text-lg">{selectedEmployeeForReport.name}</p><p className="text-xs text-slate-500 uppercase">{selectedEmployeeForReport.role} | {selectedEmployeeForReport.sector}</p></div>
                                             </div>
                                             <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-[10px] text-justify text-slate-600 mb-8"><strong>TERMO:</strong> Declaro ter recebido os EPIs abaixo em perfeitas condições, comprometendo-me a usá-los para os fins a que se destinam e zelar pela sua guarda.</div>
                                             <table className="w-full text-xs text-left">
                                                 <thead className="border-b-2 border-slate-800 font-bold uppercase"><tr><th className="py-2">Data</th><th>EPI</th><th>CA</th><th className="text-center">Qtd</th><th className="text-center">Assinatura</th></tr></thead>
                                                 <tbody>
-                                                    {deliveries.filter(d=>d.employeeId===data.report.id && d.status==='signed').map(d=>(
+                                                    {deliveries.filter(d=>d.employeeId===selectedEmployeeForReport.id && d.status==='signed').map(d=>(
                                                         <tr key={d.id} className="border-b border-slate-100"><td className="py-3">{d.createdAt?.toDate().toLocaleDateString('pt-PT')}</td><td>{d.epiName}</td><td>{d.epiCA}</td><td className="text-center">{d.quantityDelivered}</td><td className="text-center"><img src={d.signature} className="h-8 mx-auto" /></td></tr>
                                                     ))}
                                                 </tbody>
                                             </table>
-                                            <button onClick={()=>setData(p=>({...p, report:null}))} className="mt-8 px-4 py-2 text-slate-500 font-bold text-xs bg-slate-100 rounded hover:bg-slate-200 no-print">Voltar</button>
+                                            <button onClick={()=>setSelectedEmployeeForReport(null)} className="mt-8 px-4 py-2 text-slate-500 font-bold text-xs bg-slate-100 rounded hover:bg-slate-200 no-print">Voltar</button>
                                             <button onClick={()=>window.print()} className="mt-8 ml-2 px-4 py-2 bg-brand-700 text-white font-bold text-xs rounded hover:bg-brand-800 no-print">Imprimir</button>
                                         </div>
                                     )}
@@ -526,34 +559,34 @@
                     </main>
 
                     {/* MODAIS */}
-                    <Modal isOpen={modals.addEmp} onClose={()=>toggleModal('addEmp', false)} title="Novo Colaborador">
+                    <Modal isOpen={showAddEmployeeModal} onClose={()=>setShowAddEmployeeModal(false)} title="Novo Colaborador">
                         <div className="space-y-4">
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome" value={data.newEmp.name} onChange={e=>setData({...data, newEmp:{...data.newEmp, name:e.target.value}})} />
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Função" value={data.newEmp.role} onChange={e=>setData({...data, newEmp:{...data.newEmp, role:e.target.value}})} />
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Setor" value={data.newEmp.sector} onChange={e=>setData({...data, newEmp:{...data.newEmp, sector:e.target.value}})} />
+                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome" value={newEmployee.name} onChange={e=>setNewEmployee({...newEmployee, name:e.target.value})} />
+                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Função" value={newEmployee.role} onChange={e=>setNewEmployee({...newEmployee, role:e.target.value})} />
+                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Setor" value={newEmployee.sector} onChange={e=>setNewEmployee({...newEmployee, sector:e.target.value})} />
                             <button onClick={handleAddEmployee} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900">Salvar</button>
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.addInv} onClose={()=>toggleModal('addInv', false)} title="Novo EPI">
+                    <Modal isOpen={showAddInventoryModal} onClose={()=>setShowAddInventoryModal(false)} title="Novo EPI">
                         <div className="space-y-4">
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome" value={data.newInv.name} onChange={e=>setData({...data, newInv:{...data.newInv, name:e.target.value}})} />
-                            <div className="flex gap-4"><input className="flex-1 p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="CA" value={data.newInv.ca} onChange={e=>setData({...data, newInv:{...data.newInv, ca:e.target.value}})} /><input type="number" className="w-24 p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Qtd" value={data.newInv.quantity} onChange={e=>setData({...data, newInv:{...data.newInv, quantity:e.target.value}})} /></div>
+                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome" value={newInventory.name} onChange={e=>setNewInventory({...newInventory, name:e.target.value})} />
+                            <div className="flex gap-4"><input className="flex-1 p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="CA" value={newInventory.ca} onChange={e=>setNewInventory({...newInventory, ca:e.target.value})} /><input type="number" className="w-24 p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Qtd" value={newInventory.quantity} onChange={e=>setNewInventory({...newInventory, quantity:e.target.value})} /></div>
                             <button onClick={handleAddInventory} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900">Cadastrar</button>
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.addStock} onClose={()=>toggleModal('addStock', false)} title="Adicionar Estoque">
+                    <Modal isOpen={showStockAddModal} onClose={()=>setShowStockAddModal(false)} title="Adicionar Estoque">
                         <div className="space-y-4">
-                            <p>Atual: <b>{data.stock.curr}</b></p>
-                            <input type="number" autoFocus className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 text-center text-xl font-bold" placeholder="+0" value={data.stock.add} onChange={e=>setData({...data, stock:{...data.stock, add:e.target.value}})} />
+                            <p>Atual: <b>{stockToAdd.current}</b></p>
+                            <input type="number" autoFocus className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 text-center text-xl font-bold" placeholder="+0" value={stockToAdd.add} onChange={e=>setStockToAdd({...stockToAdd, add:e.target.value})} />
                             <button onClick={handleAddStock} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700">Confirmar</button>
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.delivery} onClose={()=>toggleModal('delivery', false)} title="Nova Entrega">
+                    <Modal isOpen={isDeliveryModalOpen} onClose={() => { setDeliveryModalOpen(false); setDeliveryCart([]); setDeliveryEmployeeId(''); }} title="Nova Entrega">
                         <div className="space-y-6">
-                            <div><label className="text-xs font-bold text-slate-500 uppercase">Colaborador</label><SearchableSelect options={employees.map(e=>({value:e.id, label:e.name, main:e.name, sub:e.role}))} value={data.deliveryEmp} onChange={v=>setData(p=>({...p, deliveryEmp:v}))} placeholder="Buscar..." disabled={data.cart.length>0} /></div>
+                            <div><label className="text-xs font-bold text-slate-500 uppercase">Colaborador</label><SearchableSelect options={employees.map(e=>({value:e.id, label:e.name, main:e.name, sub:e.role}))} value={deliveryEmployeeId} onChange={setDeliveryEmployeeId} placeholder="Buscar..." disabled={deliveryCart.length>0} /></div>
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                                 <label className="text-xs font-bold text-slate-500 uppercase">Adicionar Item</label>
                                 <div className="flex gap-3">
@@ -562,25 +595,33 @@
                                 </div>
                                 <button onClick={addToCart} className="w-full py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded hover:bg-slate-100">Adicionar</button>
                             </div>
-                            {data.cart.length > 0 && (
+                            {deliveryCart.length > 0 && (
                                 <div className="space-y-4">
-                                    <div className="max-h-40 overflow-y-auto border rounded-lg">{data.cart.map(i=><div key={i.id} className="p-3 border-b flex justify-between items-center bg-white"><div><p className="font-bold text-sm">{i.name}</p><p className="text-xs text-slate-500">Qtd: {i.qty}</p></div><button onClick={()=>setData(p=>({...p, cart:p.cart.filter(x=>x.id!==i.id)}))} className="text-red-400"><Icon name="MinusCircle"/></button></div>)}</div>
-                                    <div className="grid grid-cols-2 gap-3"><button onClick={()=>processDelivery(null)} className="py-3 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Depois</button><button onClick={()=>toggleModal('sign', true)} className="py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900">Assinar</button></div>
+                                    <div className="max-h-40 overflow-y-auto border rounded-lg">{deliveryCart.map(i=><div key={i.id} className="p-3 border-b flex justify-between items-center bg-white"><div><p className="font-bold text-sm">{i.name}</p><p className="text-xs text-slate-500">Qtd: {i.qty}</p></div><button onClick={()=>setDeliveryCart(deliveryCart.filter(x=>x.id!==i.id))} className="text-red-400"><Icon name="MinusCircle"/></button></div>)}</div>
+                                    <div className="grid grid-cols-2 gap-3"><button onClick={()=>processDelivery(null)} className="py-3 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Depois</button><button onClick={()=>setSignatureModalOpen(true)} className="py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900">Assinar</button></div>
                                 </div>
                             )}
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.sign} onClose={()=>toggleModal('sign', false)} title="Assinatura" fullScreen={true}>
-                        <SignaturePad onSave={data.signPending ? signPendingDelivery : processDelivery} onCancel={()=>toggleModal('sign', false)} />
+                    <Modal isOpen={isSignatureModalOpen} onClose={()=>setSignatureModalOpen(false)} title="Assinatura" fullScreen={true}>
+                        <SignaturePad onSave={pendingDeliveryToSign ? signPendingDelivery : processDelivery} onCancel={()=>setSignatureModalOpen(false)} />
                     </Modal>
+
+                    {showImportModal && (
+                        <Modal isOpen={true} onClose={() => { setShowImportModal(false); setImportText(''); }} title={`Importar ${importType === 'employees' ? 'Colaboradores' : 'Estoque'}`}>
+                            <div className="space-y-4"><p className="text-sm text-slate-500 bg-slate-50 p-3 rounded border border-slate-100">Cole os dados (CSV/Excel).<br/>Formato: {importType === 'employees' ? <b>Nome, Função, Setor</b> : <b>Nome, Complemento, CA, Quantidade</b>}</p><textarea className="w-full h-48 p-4 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-brand-500 outline-none" value={importText} onChange={e => setImportText(e.target.value)} /><button onClick={handleImport} className="w-full py-3 bg-brand-700 text-white rounded-lg font-bold text-sm hover:bg-brand-900 transition-colors">Importar</button></div>
+                        </Modal>
+                    )}
 
                 </div>
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        window.onload = () => {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        };
     </script>
 </body>
 </html>
