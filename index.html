@@ -2,9 +2,22 @@
 <html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EPI MACBOOT - Acesso Restrito</title>
     
+    <!-- --- CONFIGURAÇÕES PWA (TRANSFORMAR EM APP) --- -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Ícone Genérico para o App (Escudo de Segurança) -->
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2491/2491039.png">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2491/2491039.png">
+
+    <!-- Manifesto Web App Embutido (Data URI) -->
+    <link rel="manifest" href='data:application/manifest+json,{"name":"EPI MACBOOT","short_name":"EPI MACBOOT","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#0f172a","orientation":"portrait","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2491/2491039.png","sizes":"512x512","type":"image/png"}]}'>
+
     <!-- 1. Fonte Profissional -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,7 +50,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; user-select: none; -webkit-tap-highlight-color: transparent; }
+        input, select, textarea { user-select: text; }
         @media print {
             body * { visibility: hidden; }
             .print-content, .print-content * { visibility: visible; }
@@ -133,6 +147,31 @@
         const db = firebase.firestore();
         const appId = 'episystem-macboot-v1';
         const { useState, useEffect, useRef } = React;
+
+        // --- COMPONENTE ERRO PERMISSÃO ---
+        const PermissionModal = ({ isOpen }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden p-8 text-center space-y-6">
+                        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+                            <Icon name="Lock" size={32} />
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3>
+                            <p className="text-slate-500 mt-2">O Firebase está impedindo alterações. Verifique as regras.</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-xl text-left text-sm space-y-3 border border-slate-200">
+                            <p><strong>Para corrigir o erro de "Excluir" ou "Salvar":</strong></p>
+                            <p>1. Vá ao Console Firebase > Firestore Database > Rules.</p>
+                            <p>2. Altere para (se usuário logado):</p>
+                            <code className="block bg-slate-800 text-green-400 p-2 rounded text-xs overflow-x-auto">allow read, write: if request.auth != null;</code>
+                        </div>
+                        <button onClick={() => window.location.reload()} className="w-full py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors uppercase tracking-widest text-sm">Recarregar</button>
+                    </div>
+                </div>
+            );
+        };
 
         // --- SELECT PESQUISÁVEL ---
         const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) => {
@@ -307,6 +346,7 @@
         function App() {
             const [user, setUser] = useState(null);
             const [checkingAuth, setCheckingAuth] = useState(true);
+            const [permissionError, setPermissionError] = useState(false);
             const [view, setView] = useState('dashboard');
             const [employees, setEmployees] = useState([]);
             const [inventory, setInventory] = useState([]);
@@ -345,11 +385,18 @@
 
             useEffect(() => {
                 if (!user || !db) return;
-                const unsubEmp = db.collection('artifacts').doc(appId).collection('employees').onSnapshot(s => setEmployees(s.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
-                const unsubInv = db.collection('artifacts').doc(appId).collection('inventory').onSnapshot(s => setInventory(s.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
+                
+                const errorHandler = (err) => { 
+                    console.error("DB Error:", err); 
+                    if (err.code === 'permission-denied') setPermissionError(true); 
+                };
+
+                const unsubEmp = db.collection('artifacts').doc(appId).collection('employees').onSnapshot(s => setEmployees(s.docs.map(d => ({id: d.id, ...d.data()}))), errorHandler);
+                const unsubInv = db.collection('artifacts').doc(appId).collection('inventory').onSnapshot(s => setInventory(s.docs.map(d => ({id: d.id, ...d.data()}))), errorHandler);
                 const unsubDel = db.collection('artifacts').doc(appId).collection('deliveries').onSnapshot(s => {
                     setDeliveries(s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
-                }, console.error);
+                }, errorHandler);
+                
                 return () => { unsubEmp(); unsubInv(); unsubDel(); };
             }, [user]);
 
@@ -368,7 +415,7 @@
                     setNewInventory({ name: '', complement: '', ca: '', quantity: 0 });
                     setShowAddInventoryModal(false);
                     alert("Sucesso!");
-                } catch (error) { alert("Erro ao salvar: " + error.message); }
+                } catch (error) { if (error.code === 'permission-denied') setPermissionError(true); else alert("Erro ao salvar: " + error.message); }
             };
 
             const handleManualAddEmployee = async () => {
@@ -380,7 +427,7 @@
                     setNewEmployee({ name: '', role: '', sector: '' });
                     setShowAddEmployeeModal(false);
                     alert("Sucesso!");
-                } catch (error) { alert("Erro ao salvar: " + error.message); }
+                } catch (error) { if (error.code === 'permission-denied') setPermissionError(true); else alert("Erro ao salvar: " + error.message); }
             };
 
             const handleAddStock = async () => {
@@ -392,7 +439,7 @@
                     setShowStockAddModal(false);
                     setStockToAdd({ id: '', current: 0, add: '' });
                     alert("Estoque atualizado!");
-                } catch(error) { alert("Erro: " + error.message); }
+                } catch(error) { if (error.code === 'permission-denied') setPermissionError(true); else alert("Erro: " + error.message); }
             };
 
             const deleteItem = async (col, id) => {
@@ -400,7 +447,7 @@
                 try {
                     await db.collection('artifacts').doc(appId).collection(col).doc(id).delete();
                     alert("Item excluído.");
-                } catch (err) { alert("Erro ao excluir. Verifique permissões."); }
+                } catch (err) { if (err.code === 'permission-denied') setPermissionError(true); else alert("Erro ao excluir: " + err.message); }
             };
 
             const handleImport = async () => {
@@ -423,7 +470,7 @@
                     await batch.commit();
                     setImportText(''); setShowImportModal(false);
                     if(skipped > 0) alert(`${skipped} itens duplicados foram ignorados.`); else alert("Importação concluída.");
-                } catch (err) { alert("Erro na importação: " + err.message); }
+                } catch (err) { if (err.code === 'permission-denied') setPermissionError(true); else alert("Erro na importação: " + err.message); }
             };
 
             const addToCart = () => {
@@ -454,7 +501,7 @@
                     setDeliveryCart([]); setDeliveryEmployeeId(''); setDeliveryModalOpen(false); setSignatureModalOpen(false);
                     if (signature) { setSelectedEmployeeForReport(employee); setView('reports'); } 
                     else { setView('pending-signatures'); }
-                } catch (err) { alert("Erro na entrega: " + err.message); }
+                } catch (err) { if (err.code === 'permission-denied') setPermissionError(true); else alert("Erro na entrega: " + err.message); }
             };
 
             const signPendingDelivery = async (signature) => {
@@ -463,7 +510,7 @@
                     await db.collection('artifacts').doc(appId).collection('deliveries').doc(pendingDeliveryToSign.id)
                         .update({ signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
                     setSignatureModalOpen(false); setPendingDeliveryToSign(null);
-                } catch (err) { alert("Erro ao assinar: " + err.message); }
+                } catch (err) { if (err.code === 'permission-denied') setPermissionError(true); else alert("Erro ao assinar: " + err.message); }
             };
 
             const handleLogout = () => { auth.signOut(); };
@@ -483,6 +530,8 @@
 
             return (
                 <div className="flex h-screen overflow-hidden">
+                    <PermissionModal isOpen={permissionError} />
+
                     <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 lg:static lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                         <div className="h-16 flex items-center px-6 border-b border-slate-100">
                             <h1 className="text-xl font-bold text-brand-900 tracking-tight flex items-center gap-2"><span className="w-8 h-8 bg-brand-700 text-white rounded-lg flex items-center justify-center"><Icon name="ShieldCheck" size={20}/></span> EPI MACBOOT</h1>
