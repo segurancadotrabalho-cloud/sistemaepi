@@ -28,12 +28,15 @@
         }
     </script>
     
-    <!-- 2. Bibliotecas (Versões de Desenvolvimento para melhor debug) -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- 2. Bibliotecas (UMD - Estabilidade Máxima) -->
+    <!-- React Core -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (Compilador JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Firebase -->
+    <!-- Firebase (Compatibilidade Web) -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -56,10 +59,10 @@
 <body class="bg-brand-50 text-slate-800">
 
     <div id="global-error">
-        <h2 class="text-2xl font-bold mb-2">Erro de Carregamento</h2>
-        <p>Ocorreu um erro ao iniciar a aplicação.</p>
-        <pre id="error-msg" class="mt-4 p-4 bg-white border border-red-200 rounded text-sm overflow-auto"></pre>
-        <button onclick="window.location.reload()" class="mt-4 px-4 py-2 bg-red-600 text-white rounded">Recarregar</button>
+        <h2 class="text-2xl font-bold mb-2">Erro de Execução</h2>
+        <p>Ocorreu um erro inesperado.</p>
+        <pre id="error-msg" class="mt-4 p-4 bg-white border border-red-200 rounded text-sm overflow-auto font-mono"></pre>
+        <button onclick="window.location.reload()" class="mt-4 px-4 py-2 bg-red-600 text-white rounded font-bold">Recarregar Página</button>
     </div>
 
     <div id="initial-loader">
@@ -70,10 +73,12 @@
     <div id="root"></div>
 
     <script>
+        // Tratamento global de erros para não ficar tela branca
         window.onerror = function(msg, url, line, col, error) {
             document.getElementById('initial-loader').style.display = 'none';
             document.getElementById('global-error').style.display = 'block';
             document.getElementById('error-msg').innerText = msg + "\nLinha: " + line;
+            return false;
         };
     </script>
 
@@ -90,6 +95,7 @@
             appId: "1:1088262046750:web:6d6250e1d1cd020ade5a0f"
         };
 
+        // Inicialização Segura
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
@@ -97,6 +103,7 @@
         const db = firebase.firestore();
         const appId = 'episystem-macboot-v1';
 
+        // Hooks React (Globais UMD)
         const { useState, useEffect, useRef } = React;
 
         // ==========================================
@@ -139,7 +146,7 @@
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden p-8 text-center space-y-6">
                         <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto"><Icon name="Lock" size={32} /></div>
-                        <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações. Verifique as regras.</p></div>
+                        <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações.</p></div>
                         <div className="bg-slate-50 p-4 rounded-xl text-left text-sm space-y-2 border border-slate-200">
                             <p><strong>Para corrigir o erro de "Excluir" ou "Salvar":</strong></p>
                             <p>1. Vá ao Console Firebase > Firestore Database > Rules.</p>
@@ -156,6 +163,7 @@
             const [search, setSearch] = useState('');
             const [isOpen, setIsOpen] = useState(false);
             const wrapperRef = useRef(null);
+            
             const filtered = options.filter(opt => opt.label.toLowerCase().includes(search.toLowerCase()));
 
             useEffect(() => {
@@ -297,7 +305,19 @@
 
             // Modais
             const [modals, setModals] = useState({ import: false, addEmp: false, addInv: false, addStock: false, delivery: false, sign: false });
-            const [data, setData] = useState({ importType: '', importText: '', newEmp: {name:'', role:'', sector:''}, newInv: {name:'', ca:'', quantity:0}, stock: {id:'', curr:0, add:''}, deliveryEmp:'', cart:[], signPending:null, report:null });
+            // FIXED: Ensure all state properties are defined initially to prevent ReferenceError
+            const [data, setData] = useState({ 
+                importType: '', 
+                importText: '', 
+                newEmp: {name:'', role:'', sector:''}, 
+                newInv: {name:'', ca:'', quantity:0}, 
+                stock: {id:'', curr:0, add:''}, 
+                deliveryEmp:'', 
+                cart:[], 
+                signPending:null, 
+                report:null 
+            });
+            const [currentEpiSelection, setCurrentEpiSelection] = useState({ id: '', qty: 1 });
 
             useEffect(() => {
                 const unsub = auth.onAuthStateChanged(u => {
@@ -333,7 +353,10 @@
             };
 
             const handleAddInventory = async () => {
-                if(inventory.some(i => i.name === data.newInv.name && i.ca === data.newInv.ca)) return alert("Item já existe!");
+                // Check duplicate
+                if(inventory.some(i => i.name.trim().toLowerCase() === data.newInv.name.trim().toLowerCase() && i.ca === data.newInv.ca)) {
+                    return alert("Item duplicado (Nome + CA já existem).");
+                }
                 try {
                     await db.collection('artifacts').doc(appId).collection('inventory').add({...data.newInv, quantity: +data.newInv.quantity, createdAt: new Date()});
                     toggleModal('addInv', false); setData(p=>({...p, newInv:{name:'', ca:'', quantity:0}}));
@@ -345,6 +368,18 @@
                     await db.collection('artifacts').doc(appId).collection('inventory').doc(data.stock.id).update({ quantity: data.stock.curr + +data.stock.add });
                     toggleModal('addStock', false);
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
+            };
+
+            const addToCart = () => {
+                if(!currentEpiSelection.id) return alert("Selecione um EPI.");
+                const epi = inventory.find(i => i.id === currentEpiSelection.id);
+                if (!epi || epi.quantity < currentEpiSelection.qty) return alert("Estoque insuficiente.");
+                if (data.cart.some(i => i.id === epi.id)) return alert("Item já está na lista.");
+                
+                // Add to cart state
+                const newItem = { ...epi, qty: parseInt(currentEpiSelection.qty) };
+                setData(p => ({ ...p, cart: [...p.cart, newItem] }));
+                setCurrentEpiSelection({ id: '', qty: 1 });
             };
 
             const processDelivery = async (signature = null) => {
@@ -369,12 +404,12 @@
             };
 
             const signPendingDelivery = async (signature) => {
-                if (!pendingDeliveryToSign) return;
+                if (!data.signPending) return;
                 try {
-                    await db.collection('artifacts').doc(appId).collection('deliveries').doc(pendingDeliveryToSign.id)
+                    await db.collection('artifacts').doc(appId).collection('deliveries').doc(data.signPending.id)
                         .update({ signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
-                    setSignatureModalOpen(false); setPendingDeliveryToSign(null);
-                } catch (err) { if (err.code === 'permission-denied') setPermissionError(true); else alert("Erro: " + err.message); }
+                    toggleModal('sign', false); setData(p=>({...p, signPending:null}));
+                } catch(err) { if (err.code === 'permission-denied') setPermissionError(true); else alert("Erro: " + err.message); }
             };
 
             const handleLogout = () => { auth.signOut(); };
@@ -383,13 +418,12 @@
             const epiOptions = inventory.filter(i => i.quantity > 0).map(i => ({ value: i.id, label: i.name, main: i.name, sub: `CA: ${i.ca} | Disp: ${i.quantity}` }));
 
             const SidebarItem = ({ icon, label, id, count }) => (
-                <button onClick={() => { setView(id); setSidebarOpen(false); setSelectedEmployeeForReport(null); }} className={`flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all mb-1 ${view === id ? 'bg-brand-700 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+                <button onClick={() => { setView(id); setSidebarOpen(false); setData(p=>({...p, report:null})); }} className={`flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all mb-1 ${view === id ? 'bg-brand-700 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
                     <div className="flex items-center gap-3"><Icon name={icon} size={18} /> {label}</div>
                     {count > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">{count}</span>}
                 </button>
             );
 
-            // Se não houver utilizador e o carregamento terminou, mostra Login
             if(!user) return <LoginScreen />;
 
             return (
