@@ -211,46 +211,68 @@
 
         const SignaturePad = ({ onSave, onCancel }) => {
             const canvasRef = useRef(null);
+            const isDrawing = useRef(false);
+
             useEffect(() => {
                 const resize = () => {
                     const c = canvasRef.current;
                     if(!c) return;
                     const r = c.parentElement.getBoundingClientRect();
-                    c.width = r.width; c.height = r.height;
+                    c.width = r.width;
+                    c.height = r.height;
                     const ctx = c.getContext('2d');
-                    ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 3; 
+                    ctx.lineCap = 'round'; 
+                    ctx.strokeStyle = '#000';
                 };
                 setTimeout(resize, 100);
                 window.addEventListener('resize', resize);
                 return () => window.removeEventListener('resize', resize);
             }, []);
 
-            const draw = (e) => {
-                if(e.buttons !== 1) return;
-                const c = canvasRef.current;
-                const ctx = c.getContext('2d');
-                const r = c.getBoundingClientRect();
-                const x = (e.clientX || e.touches[0].clientX) - r.left;
-                const y = (e.clientY || e.touches[0].clientY) - r.top;
-                ctx.lineTo(x, y); ctx.stroke();
+            const getPos = (e) => {
+                const r = canvasRef.current.getBoundingClientRect();
+                const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+                const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+                return { x, y };
             };
+
             const start = (e) => {
+                isDrawing.current = true;
+                const ctx = canvasRef.current.getContext('2d');
+                const {x, y} = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+            };
+
+            const move = (e) => {
+                if(!isDrawing.current) return;
+                const ctx = canvasRef.current.getContext('2d');
+                const {x, y} = getPos(e);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            };
+
+            const end = () => {
+                isDrawing.current = false;
+            };
+
+            const clear = () => {
                 const c = canvasRef.current;
-                const ctx = c.getContext('2d');
-                const r = c.getBoundingClientRect();
-                const x = (e.clientX || e.touches[0].clientX) - r.left;
-                const y = (e.clientY || e.touches[0].clientY) - r.top;
-                ctx.beginPath(); ctx.moveTo(x, y);
+                c.getContext('2d').clearRect(0, 0, c.width, c.height);
             };
 
             return (
                 <div className="flex flex-col h-full bg-slate-100">
                     <div className="flex-1 m-4 bg-white rounded-xl shadow-inner border border-slate-300 relative touch-none">
-                        <canvas ref={canvasRef} onMouseDown={start} onMouseMove={draw} onTouchStart={start} onTouchMove={draw} className="w-full h-full cursor-crosshair" />
+                        <canvas ref={canvasRef} 
+                            onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
+                            onTouchStart={start} onTouchMove={move} onTouchEnd={end}
+                            className="w-full h-full cursor-crosshair block" />
                         <div className="absolute bottom-4 right-4 text-xs font-bold text-slate-400 pointer-events-none select-none">ASSINAR AQUI</div>
                     </div>
                     <div className="p-6 flex gap-4 bg-white border-t border-slate-200">
-                        <button onClick={() => {const c=canvasRef.current; c.getContext('2d').clearRect(0,0,c.width,c.height)}} className="px-6 py-3 text-red-600 font-bold bg-red-50 rounded-xl hover:bg-red-100 uppercase text-xs">Limpar</button>
+                        <button onClick={clear} className="px-6 py-3 text-red-600 font-bold bg-red-50 rounded-xl hover:bg-red-100 uppercase text-xs">Limpar</button>
                         <div className="flex gap-3 ml-auto">
                             <button onClick={onCancel} className="px-6 py-3 text-slate-600 font-bold bg-slate-100 rounded-xl uppercase text-xs">Cancelar</button>
                             <button onClick={() => onSave(canvasRef.current.toDataURL())} className="px-8 py-3 bg-brand-700 text-white font-bold rounded-xl uppercase text-xs shadow-lg">Confirmar</button>
@@ -271,7 +293,6 @@
                 e.preventDefault(); 
                 setLoading(true); 
                 setError('');
-                
                 try {
                     const persistence = rememberMe 
                         ? firebase.auth.Auth.Persistence.LOCAL 
@@ -316,13 +337,14 @@
             const [deliveries, setDeliveries] = useState([]);
             const [permissionError, setPermissionError] = useState(false);
             const [isSidebarOpen, setSidebarOpen] = useState(false);
+            const [reportSearch, setReportSearch] = useState(''); // NOVO: Busca no relatório
 
             // Modais
             const [modals, setModals] = useState({ import: false, addEmp: false, addInv: false, addStock: false, delivery: false, sign: false });
             
             // Dados
             const [importType, setImportType] = useState(null);
-            const [importText, setImportText] = useState(''); // CORRIGIDO: Adicionado state que faltava
+            const [importText, setImportText] = useState('');
             const [newEmployee, setNewEmployee] = useState({ name: '', role: '', sector: '' });
             const [newInventory, setNewInventory] = useState({ name: '', complement: '', ca: '', quantity: 0 });
             const [stockToAdd, setStockToAdd] = useState({ id: '', current: 0, add: '' });
@@ -365,7 +387,6 @@
                         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                         const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
 
-                        // Processar dados (ignora cabeçalho)
                         const batch = db.batch();
                         const colRef = db.collection('artifacts').doc(appId).collection(importType);
                         let added = 0;
@@ -492,7 +513,7 @@
             const epiOptions = inventory.filter(i => i.quantity > 0).map(i => ({ value: i.id, label: i.name, main: i.name, sub: `CA: ${i.ca} | Disp: ${i.quantity}` }));
 
             const SidebarItem = ({ icon, label, id, count }) => (
-                <button onClick={() => { setView(id); setSidebarOpen(false); setSelectedEmployeeForReport(null); }} className={`flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all mb-1 ${view === id ? 'bg-brand-700 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+                <button onClick={() => { setView(id); setSidebarOpen(false); setSelectedEmployeeForReport(null); setReportSearch(''); }} className={`flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all mb-1 ${view === id ? 'bg-brand-700 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
                     <div className="flex items-center gap-3"><Icon name={icon} size={18} /> {label}</div>
                     {count > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">{count}</span>}
                 </button>
@@ -572,8 +593,35 @@
                             {view === 'reports' && (
                                 <div>
                                     {!selectedEmployeeForReport ? (
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            {employees.map(e=>(<button key={e.id} onClick={()=>setSelectedEmployeeForReport(e)} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all"><p className="font-bold text-slate-800">{e.name}</p><p className="text-xs text-slate-500 uppercase">{e.role}</p></button>))}
+                                        <div className="space-y-4">
+                                            {/* BARRA DE PESQUISA NOS RELATÓRIOS (NOVO!) */}
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Buscar colaborador nos relatórios..."
+                                                    className="w-full p-4 pl-12 bg-white border border-slate-200 rounded-xl shadow-sm outline-none focus:border-brand-500 transition-all text-sm font-medium"
+                                                    value={reportSearch}
+                                                    onChange={(e) => setReportSearch(e.target.value)}
+                                                />
+                                                <div className="absolute left-4 top-4 text-slate-400">
+                                                    <Icon name="Search" size={20} />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                {employees
+                                                    .filter(e => e.name.toLowerCase().includes(reportSearch.toLowerCase()) || e.role.toLowerCase().includes(reportSearch.toLowerCase()))
+                                                    .map(e=>(
+                                                        <button key={e.id} onClick={()=>setSelectedEmployeeForReport(e)} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all">
+                                                            <p className="font-bold text-slate-800">{e.name}</p>
+                                                            <p className="text-xs text-slate-500 uppercase">{e.role}</p>
+                                                        </button>
+                                                    ))
+                                                }
+                                                {employees.length > 0 && employees.filter(e => e.name.toLowerCase().includes(reportSearch.toLowerCase())).length === 0 && (
+                                                    <div className="col-span-3 text-center py-8 text-slate-400">Nenhum colaborador encontrado com este nome.</div>
+                                                )}
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="bg-white rounded-xl shadow-lg print-content p-10">
