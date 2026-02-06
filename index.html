@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EPI MACBOOT - Gestão Profissional</title>
+    <title>Gestão EPI - Multilojas</title>
     
     <!-- PWA Config -->
     <meta name="theme-color" content="#0f172a">
@@ -50,8 +50,6 @@
         .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         #global-error { display: none; position: fixed; inset: 0; background: #fef2f2; z-index: 10000; padding: 2rem; color: #991b1b; font-family: monospace; overflow: auto; }
-        
-        /* Loading Overlay para Importação */
         #import-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 20000; display: none; align-items: center; justify-content: center; flex-direction: column; color: white; }
     </style>
 </head>
@@ -71,8 +69,7 @@
 
     <div id="import-overlay">
         <div class="spinner mb-4" style="border-color: #ffffff40; border-top-color: #fff;"></div>
-        <h2 class="text-xl font-bold">IMPORTANDO DADOS...</h2>
-        <p class="text-sm opacity-80">Por favor aguarde, isto pode levar alguns segundos.</p>
+        <h2 class="text-xl font-bold">A PROCESSAR...</h2>
     </div>
     
     <div id="root"></div>
@@ -87,8 +84,23 @@
 
     <script type="text/babel">
         // ==========================================
-        // CONFIGURAÇÃO FIREBASE (NOVA CONTA)
+        // DADOS DAS EMPRESAS
         // ==========================================
+        const CONSTANTES_EMPRESAS = {
+            'MACBOOT': {
+                razao: 'MACBOOT INDUSTRIA E COMERCIO DE CALÇADOS LTDA',
+                cnpj: '68.403.583/0001-35',
+                cor: 'bg-slate-800',
+                texto: 'text-white'
+            },
+            'PESPONTO': {
+                razao: 'MACBOOT INDUSTRIA E COMERCIO DE CALÇADOS LTDA',
+                cnpj: '68.403.583/0002-16',
+                cor: 'bg-blue-600',
+                texto: 'text-white'
+            }
+        };
+
         const firebaseConfig = {
             apiKey: "AIzaSyAAV6tC_dn8CBrw6g74gzAtYweiwq_9hPw",
             authDomain: "epimac.firebaseapp.com",
@@ -107,10 +119,7 @@
 
         const { useState, useEffect, useRef, useMemo } = React;
 
-        // ==========================================
-        // ÍCONES & UI
-        // ==========================================
-        // (Ícones simplificados para não ocupar espaço, funcionalidade mantida)
+        // --- ÍCONES ---
         const Icons = {
             UserPlus: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>,
             Package: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
@@ -138,7 +147,8 @@
             Calendar: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
             BarChart: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
             Database: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
-            DownloadCloud: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+            DownloadCloud: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>,
+            Filter: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         };
         const Icon = ({ name, size = 20, className }) => { const Ico = Icons[name]; return Ico ? <Ico width={size} height={size} className={className} /> : null; };
 
@@ -153,6 +163,10 @@
                     <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden p-8 text-center space-y-6">
                         <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto"><Icon name="AlertTriangle" size={32} /></div>
                         <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações. Verifique as regras.</p></div>
+                        <div className="bg-slate-50 p-4 rounded-xl text-left text-sm space-y-2 border border-slate-200">
+                            <p><strong>Configuração Necessária (Rules):</strong></p>
+                            <code className="block bg-slate-800 text-green-400 p-2 rounded text-xs overflow-x-auto">allow read, write: if request.auth != null;</code>
+                        </div>
                         <button onClick={onClose} className="w-full py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors uppercase text-sm">Entendi</button>
                     </div>
                 </div>
@@ -214,8 +228,6 @@
 
         const SignaturePad = ({ onSave, onCancel }) => {
             const canvasRef = useRef(null);
-            const isDrawing = useRef(false);
-
             useEffect(() => {
                 const resize = () => {
                     const c = canvasRef.current;
@@ -224,58 +236,39 @@
                     c.width = r.width;
                     c.height = r.height;
                     const ctx = c.getContext('2d');
-                    ctx.lineWidth = 3; 
-                    ctx.lineCap = 'round'; 
-                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
                 };
                 setTimeout(resize, 100);
                 window.addEventListener('resize', resize);
                 return () => window.removeEventListener('resize', resize);
             }, []);
 
-            const getPos = (e) => {
-                const r = canvasRef.current.getBoundingClientRect();
-                const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-                const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-                return { x, y };
-            };
-
-            const start = (e) => {
-                isDrawing.current = true;
-                const ctx = canvasRef.current.getContext('2d');
-                const {x, y} = getPos(e);
-                ctx.beginPath();
-                ctx.moveTo(x, y);
-            };
-
-            const move = (e) => {
-                if(!isDrawing.current) return;
-                const ctx = canvasRef.current.getContext('2d');
-                const {x, y} = getPos(e);
-                ctx.lineTo(x, y);
-                ctx.stroke();
-            };
-
-            const end = () => {
-                isDrawing.current = false;
-            };
-
-            const clear = () => {
+            const draw = (e) => {
+                if(e.buttons !== 1) return;
                 const c = canvasRef.current;
-                c.getContext('2d').clearRect(0, 0, c.width, c.height);
+                const ctx = c.getContext('2d');
+                const r = c.getBoundingClientRect();
+                const x = (e.clientX || e.touches[0].clientX) - r.left;
+                const y = (e.clientY || e.touches[0].clientY) - r.top;
+                ctx.lineTo(x, y); ctx.stroke();
+            };
+            const start = (e) => {
+                const c = canvasRef.current;
+                const ctx = c.getContext('2d');
+                const r = c.getBoundingClientRect();
+                const x = (e.clientX || e.touches[0].clientX) - r.left;
+                const y = (e.clientY || e.touches[0].clientY) - r.top;
+                ctx.beginPath(); ctx.moveTo(x, y);
             };
 
             return (
                 <div className="flex flex-col h-full bg-slate-100">
                     <div className="flex-1 m-4 bg-white rounded-xl shadow-inner border border-slate-300 relative touch-none">
-                        <canvas ref={canvasRef} 
-                            onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
-                            onTouchStart={start} onTouchMove={move} onTouchEnd={end}
-                            className="w-full h-full cursor-crosshair block" />
+                        <canvas ref={canvasRef} onMouseDown={start} onMouseMove={draw} onTouchStart={start} onTouchMove={draw} className="w-full h-full cursor-crosshair" />
                         <div className="absolute bottom-4 right-4 text-xs font-bold text-slate-400 pointer-events-none select-none">ASSINAR AQUI</div>
                     </div>
                     <div className="p-6 flex gap-4 bg-white border-t border-slate-200">
-                        <button onClick={clear} className="px-6 py-3 text-red-600 font-bold bg-red-50 rounded-xl hover:bg-red-100 uppercase text-xs">Limpar</button>
+                        <button onClick={() => {const c=canvasRef.current; c.getContext('2d').clearRect(0,0,c.width,c.height)}} className="px-6 py-3 text-red-600 font-bold bg-red-50 rounded-xl hover:bg-red-100 uppercase text-xs">Limpar</button>
                         <div className="flex gap-3 ml-auto">
                             <button onClick={onCancel} className="px-6 py-3 text-slate-600 font-bold bg-slate-100 rounded-xl uppercase text-xs">Cancelar</button>
                             <button onClick={() => onSave(canvasRef.current.toDataURL())} className="px-8 py-3 bg-brand-700 text-white font-bold rounded-xl uppercase text-xs shadow-lg">Confirmar</button>
@@ -341,6 +334,8 @@
             const [permissionError, setPermissionError] = useState(false);
             const [isSidebarOpen, setSidebarOpen] = useState(false);
             const [reportSearch, setReportSearch] = useState('');
+            const [employeeSearch, setEmployeeSearch] = useState('');
+            const [employeeCompanyFilter, setEmployeeCompanyFilter] = useState('TODOS');
 
             // Modais
             const [modals, setModals] = useState({ import: false, addEmp: false, addInv: false, addStock: false, delivery: false, sign: false, backup: false });
@@ -348,9 +343,10 @@
             // Dados
             const [importType, setImportType] = useState(null);
             const [importText, setImportText] = useState('');
-            const [newEmployee, setNewEmployee] = useState({ name: '', role: '', sector: '' });
+            const [newEmployee, setNewEmployee] = useState({ name: '', role: '', sector: '', company: 'MACBOOT' });
             const [newInventory, setNewInventory] = useState({ name: '', complement: '', ca: '', quantity: 0 });
             const [stockToAdd, setStockToAdd] = useState({ id: '', current: 0, add: '' });
+            const [importCompany, setImportCompany] = useState('MACBOOT');
             
             const [deliveryEmployeeId, setDeliveryEmployeeId] = useState('');
             const [currentEpiSelection, setCurrentEpiSelection] = useState({ id: '', qty: 1 });
@@ -418,7 +414,7 @@
             // Funções
             const toggleModal = (name, val) => setModals(prev => ({...prev, [name]: val}));
 
-            // --- RESTAURAR COM CORREÇÃO DE DADOS ---
+            // --- RESTAURAR (MIGRAÇÃO) ---
             const importData = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -432,27 +428,20 @@
                         const BATCH_SIZE = 400;
                         let ops = [];
 
-                        // Limpar dados antes de inserir? Não (Merge)
-
-                        // 1. Employees
                         if(json.employees) {
                             json.employees.forEach(emp => {
                                 const ref = db.collection('artifacts').doc(appId).collection('employees').doc(emp.id || db.collection('artifacts').doc(appId).collection('employees').doc().id);
-                                ops.push({ type: 'set', ref, data: { ...emp, createdAt: new Date() } });
+                                // Garantir compatibilidade com sistema antigo: se não tiver company, assume MACBOOT
+                                ops.push({ type: 'set', ref, data: { ...emp, company: emp.company || 'MACBOOT', createdAt: new Date() } });
                             });
                         }
-
-                        // 2. Inventory (COM CORREÇÃO DE QUANTIDADE)
                         if(json.inventory) {
                             json.inventory.forEach(inv => {
                                 const ref = db.collection('artifacts').doc(appId).collection('inventory').doc(inv.id || db.collection('artifacts').doc(appId).collection('inventory').doc().id);
-                                // Força quantidade a ser número
                                 const safeQty = isNaN(parseInt(inv.quantity)) ? 0 : parseInt(inv.quantity);
                                 ops.push({ type: 'set', ref, data: { ...inv, quantity: safeQty, createdAt: new Date() } });
                             });
                         }
-
-                        // 3. Deliveries
                         if(json.deliveries) {
                             json.deliveries.forEach(del => {
                                 const ref = db.collection('artifacts').doc(appId).collection('deliveries').doc(del.id || db.collection('artifacts').doc(appId).collection('deliveries').doc().id);
@@ -466,9 +455,8 @@
                             await batch.commit();
                         }
 
-                        alert("Restauração concluída! O estoque foi corrigido.");
+                        alert("Restauração concluída!");
                         toggleModal('backup', false);
-                        
                     } catch (err) {
                         alert("Erro: " + err.message);
                     } finally {
@@ -499,6 +487,7 @@
                 document.body.removeChild(a);
             };
 
+            // --- IMPORTAR EXCEL ---
             const handleFileUpload = (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
@@ -513,12 +502,24 @@
                         const batch = db.batch();
                         const colRef = db.collection('artifacts').doc(appId).collection(importType);
                         let added = 0;
-
-                        jsonData.slice(1).forEach(row => {
+                        
+                        // Importar começa na linha 1 (ignora header) ou 0 dependendo da config. 
+                        // sheet_to_json com header:1 retorna array de arrays.
+                        // O slice(1) remove o cabeçalho.
+                        const rows = jsonData.slice(1);
+                        
+                        rows.forEach(row => {
                             if(row.length < 3) return;
                             const docRef = colRef.doc();
                             if(importType === 'employees') {
-                                batch.set(docRef, { name: row[0], role: row[1], sector: row[2], createdAt: new Date() });
+                                // row[0]=Nome, row[1]=Função, row[2]=Setor
+                                batch.set(docRef, { 
+                                    name: row[0], 
+                                    role: row[1], 
+                                    sector: row[2], 
+                                    company: importCompany, // Usa a empresa selecionada no modal
+                                    createdAt: new Date() 
+                                });
                                 added++;
                             } else if(importType === 'inventory') {
                                 const name = row[0]; const ca = row[2];
@@ -550,7 +551,7 @@
             const handleAddEmployee = async () => {
                 try {
                     await db.collection('artifacts').doc(appId).collection('employees').add({...newEmployee, createdAt: new Date()});
-                    toggleModal('addEmp', false); setNewEmployee({name:'', role:'', sector:''});
+                    toggleModal('addEmp', false); setNewEmployee({name:'', role:'', sector:'', company: 'MACBOOT'});
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
@@ -563,12 +564,9 @@
             };
 
             const handleAddStock = async () => {
-                // Auto-correção de NaN: se o atual for inválido, assume 0
                 const currentQty = isNaN(parseInt(stockToAdd.current)) ? 0 : parseInt(stockToAdd.current);
                 const addQty = parseInt(stockToAdd.add);
-
                 if(isNaN(addQty) || addQty <= 0) return alert("Quantidade inválida.");
-                
                 try {
                     await db.collection('artifacts').doc(appId).collection('inventory').doc(stockToAdd.id).update({ quantity: currentQty + addQty });
                     toggleModal('addStock', false);
@@ -597,7 +595,6 @@
                             signature, status: signature ? 'signed' : 'pending', createdAt: new Date()
                         });
                         const invRef = db.collection('artifacts').doc(appId).collection('inventory').doc(item.id);
-                        // Proteção contra NaN na entrega também
                         const safeCurrentQty = isNaN(item.quantity) ? 0 : item.quantity;
                         batch.update(invRef, { quantity: safeCurrentQty - item.qty });
                     });
@@ -618,7 +615,7 @@
 
             const handleLogout = () => { auth.signOut(); };
 
-            const employeeOptions = employees.map(e => ({ value: e.id, label: e.name, main: e.name, sub: `${e.role} - ${e.sector}` }));
+            const employeeOptions = employees.map(e => ({ value: e.id, label: e.name, main: e.name, sub: `${e.role} - ${e.sector} [${e.company||'MAC'}]` }));
             const epiOptions = inventory.filter(i => i.quantity > 0).map(i => ({ value: i.id, label: i.name, main: i.name, sub: `CA: ${i.ca} | Disp: ${i.quantity}` }));
 
             const SidebarItem = ({ icon, label, id, count }) => (
@@ -627,6 +624,14 @@
                     {count > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">{count}</span>}
                 </button>
             );
+
+            // Filter logic for employees view
+            const filteredEmployees = employees.filter(e => {
+                const searchLower = employeeSearch.toLowerCase();
+                const matchesSearch = e.name.toLowerCase().includes(searchLower) || e.role.toLowerCase().includes(searchLower);
+                const matchesCompany = employeeCompanyFilter === 'TODOS' || (e.company || 'MACBOOT') === employeeCompanyFilter;
+                return matchesSearch && matchesCompany;
+            });
 
             if(!user) return <LoginScreen />;
 
@@ -739,10 +744,61 @@
 
                             {view === 'employees' && (
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b border-slate-100 flex justify-between"><h3 className="font-bold text-slate-800">Lista de Colaboradores</h3><div className="flex gap-2"><button onClick={()=>toggleModal('addEmp', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button><button onClick={()=>{setImportType('employees'); toggleModal('import', true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button></div></div>
+                                    <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <h3 className="font-bold text-slate-800">Lista de Colaboradores</h3>
+                                        <div className="flex gap-2">
+                                            <button onClick={()=>toggleModal('addEmp', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button>
+                                            <button onClick={()=>{setImportType('employees'); toggleModal('import', true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button>
+                                        </div>
+                                    </div>
+
+                                    {/* SEARCH AND FILTER TOOLBAR */}
+                                    <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row gap-4">
+                                        <div className="relative flex-1">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Pesquisar por nome ou função..." 
+                                                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all"
+                                                value={employeeSearch}
+                                                onChange={e => setEmployeeSearch(e.target.value)}
+                                            />
+                                            <div className="absolute left-3 top-2.5 text-slate-400">
+                                                <Icon name="Search" size={16} />
+                                            </div>
+                                        </div>
+                                        <div className="w-full md:w-48">
+                                            <div className="relative">
+                                                <select 
+                                                    className="w-full p-2 pl-9 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 bg-white appearance-none cursor-pointer"
+                                                    value={employeeCompanyFilter}
+                                                    onChange={e => setEmployeeCompanyFilter(e.target.value)}
+                                                >
+                                                    <option value="TODOS">Todas Empresas</option>
+                                                    <option value="MACBOOT">MACBOOT</option>
+                                                    <option value="PESPONTO">PESPONTO</option>
+                                                </select>
+                                                <div className="absolute left-3 top-2.5 text-slate-400 pointer-events-none">
+                                                    <Icon name="Filter" size={16} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <table className="w-full text-left text-sm">
-                                        <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Nome</th><th className="px-6 py-4">Função</th><th className="px-6 py-4 text-right">Ações</th></tr></thead>
-                                        <tbody className="divide-y divide-slate-100">{employees.map(e=><tr key={e.id} className="hover:bg-slate-50"><td className="px-6 py-4 font-medium">{e.name}</td><td className="px-6 py-4 text-slate-500">{e.role}</td><td className="px-6 py-4 text-right"><button onClick={()=>handleDelete('employees', e.id)} className="text-red-400 hover:text-red-600"><Icon name="Trash2"/></button></td></tr>)}</tbody>
+                                        <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Nome</th><th className="px-6 py-4">Empresa</th><th className="px-6 py-4">Função</th><th className="px-6 py-4 text-right">Ações</th></tr></thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {filteredEmployees.map(e=>(
+                                                <tr key={e.id} className="hover:bg-slate-50">
+                                                    <td className="px-6 py-4 font-medium">{e.name}</td>
+                                                    <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CONSTANTES_EMPRESAS[e.company||'MACBOOT'].cor} ${CONSTANTES_EMPRESAS[e.company||'MACBOOT'].texto}`}>{e.company || 'MACBOOT'}</span></td>
+                                                    <td className="px-6 py-4 text-slate-500">{e.role}</td>
+                                                    <td className="px-6 py-4 text-right"><button onClick={()=>handleDelete('employees', e.id)} className="text-red-400 hover:text-red-600"><Icon name="Trash2"/></button></td>
+                                                </tr>
+                                            ))}
+                                            {filteredEmployees.length === 0 && (
+                                                <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-400 italic">Nenhum colaborador encontrado com os filtros atuais.</td></tr>
+                                            )}
+                                        </tbody>
                                     </table>
                                 </div>
                             )}
@@ -791,7 +847,8 @@
                                                 {employees
                                                     .filter(e => e.name.toLowerCase().includes(reportSearch.toLowerCase()) || e.role.toLowerCase().includes(reportSearch.toLowerCase()))
                                                     .map(e=>(
-                                                        <button key={e.id} onClick={()=>setSelectedEmployeeForReport(e)} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all">
+                                                        <button key={e.id} onClick={()=>setSelectedEmployeeForReport(e)} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all relative overflow-hidden group">
+                                                            <div className={`absolute top-0 right-0 p-1.5 rounded-bl-lg text-[10px] font-bold text-white ${CONSTANTES_EMPRESAS[e.company||'MACBOOT'].cor}`}>{e.company || 'MAC'}</div>
                                                             <p className="font-bold text-slate-800">{e.name}</p>
                                                             <p className="text-xs text-slate-500 uppercase">{e.role}</p>
                                                         </button>
@@ -811,8 +868,8 @@
                                                         <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">EPI MACBOOT - SEGURANÇA</p>
                                                     </div>
                                                     <div className="text-right">
-                                                         <p className="text-xs font-bold text-slate-900 uppercase">MACBOOT INDUSTRIA E COMERCIO DE CALÇADOS LTDA</p>
-                                                         <p className="text-xs text-slate-500 font-mono">CNPJ: 68.403.583/0001-35</p>
+                                                         <p className="text-xs font-bold text-slate-900 uppercase">{CONSTANTES_EMPRESAS[selectedEmployeeForReport.company || 'MACBOOT'].razao}</p>
+                                                         <p className="text-xs text-slate-500 font-mono">CNPJ: {CONSTANTES_EMPRESAS[selectedEmployeeForReport.company || 'MACBOOT'].cnpj}</p>
                                                     </div>
                                                 </div>
                                                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex justify-between items-center">
@@ -848,7 +905,8 @@
                     {/* MODAIS */}
                     <Modal isOpen={modals.addEmp} onClose={()=>toggleModal('addEmp', false)} title="Novo Colaborador">
                         <div className="space-y-4">
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome" value={newEmployee.name} onChange={e=>setNewEmployee({...newEmployee, name:e.target.value})} />
+                            <div><label className="text-xs font-bold text-slate-500 uppercase">Empresa</label><select className="w-full p-3 border rounded-lg outline-none bg-white" value={newEmployee.company} onChange={e=>setNewEmployee({...newEmployee, company:e.target.value})}><option value="MACBOOT">MACBOOT</option><option value="PESPONTO">PESPONTO</option></select></div>
+                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome Completo" value={newEmployee.name} onChange={e=>setNewEmployee({...newEmployee, name:e.target.value})} />
                             <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Função" value={newEmployee.role} onChange={e=>setNewEmployee({...newEmployee, role:e.target.value})} />
                             <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Setor" value={newEmployee.sector} onChange={e=>setNewEmployee({...newEmployee, sector:e.target.value})} />
                             <button onClick={handleAddEmployee} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900">Salvar</button>
@@ -898,6 +956,7 @@
                     {modals.import && (
                         <Modal isOpen={true} onClose={() => { toggleModal('import', false); setImportText(''); }} title={`Importar ${importType === 'employees' ? 'Colaboradores' : 'Estoque'}`}>
                             <div className="space-y-4">
+                                {importType === 'employees' && <div className="mb-2"><label className="text-xs font-bold text-slate-500 uppercase">Empresa Destino</label><select className="w-full p-3 border rounded-lg bg-white mt-1" value={importCompany} onChange={e=>setImportCompany(e.target.value)}><option value="MACBOOT">MACBOOT</option><option value="PESPONTO">PESPONTO</option></select></div>}
                                 <p className="text-sm text-slate-500 bg-slate-50 p-3 rounded border border-slate-100">
                                     Anexe um ficheiro Excel (.xlsx) ou CSV. <br/>
                                     <strong>Ordem das colunas:</strong> {importType === 'employees' ? 'Nome, Função, Setor' : 'Nome, Complemento, CA, Quantidade'}
@@ -910,29 +969,11 @@
                         </Modal>
                     )}
                     
-                    {/* MODAL DE BACKUP / MIGRAÇÃO */}
                     <Modal isOpen={modals.backup} onClose={() => toggleModal('backup', false)} title="Backup e Migração">
                         <div className="space-y-6">
-                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800">
-                                <p className="font-bold mb-1">Como migrar para uma nova conta:</p>
-                                <ol className="list-decimal list-inside space-y-1 ml-2">
-                                    <li>Clique em "Baixar Backup" para salvar os dados atuais.</li>
-                                    <li>Peça ao desenvolvedor para trocar as chaves do Firebase.</li>
-                                    <li>Na nova versão vazia, use "Restaurar Backup".</li>
-                                </ol>
-                            </div>
-                            
-                            <button onClick={exportData} className="w-full py-3 bg-slate-800 text-white rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-slate-900 transition-colors">
-                                <Icon name="DownloadCloud" size={20} /> Baixar Backup Completo (.json)
-                            </button>
-                            
-                            <div className="relative border-t border-slate-200 pt-4">
-                                <p className="absolute top-1 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-slate-400 font-bold">RESTAURAR</p>
-                                <label className="block w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-center text-slate-500 font-bold cursor-pointer hover:border-brand-500 hover:text-brand-600 transition-all">
-                                    <input type="file" accept=".json" onChange={importData} className="hidden" />
-                                    <span className="flex items-center justify-center gap-2"><Icon name="Upload" size={18}/> Selecionar Arquivo de Backup</span>
-                                </label>
-                            </div>
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800"><p className="font-bold mb-1">Instruções:</p><ol className="list-decimal list-inside space-y-1 ml-2"><li>Clique em "Baixar Backup" para salvar os dados atuais.</li><li>Se mudar de conta, use "Restaurar" na nova versão.</li></ol></div>
+                            <button onClick={exportData} className="w-full py-3 bg-slate-800 text-white rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-slate-900 transition-colors"><Icon name="DownloadCloud" size={20} /> Baixar Backup (.json)</button>
+                            <div className="relative border-t border-slate-200 pt-4"><p className="absolute top-1 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-slate-400 font-bold">RESTAURAR</p><label className="block w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-center text-slate-500 font-bold cursor-pointer hover:border-brand-500 hover:text-brand-600 transition-all"><input type="file" accept=".json" onChange={importData} className="hidden" /><span className="flex items-center justify-center gap-2"><Icon name="Upload" size={18}/> Selecionar Arquivo de Backup</span></label></div>
                         </div>
                     </Modal>
 
