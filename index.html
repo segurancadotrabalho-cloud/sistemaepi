@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestão EPI - Multilojas</title>
+    <title>EPI MACBOOT - Gestão Profissional</title>
     
     <!-- PWA Config -->
     <meta name="theme-color" content="#0f172a">
@@ -50,7 +50,6 @@
         .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         #global-error { display: none; position: fixed; inset: 0; background: #fef2f2; z-index: 10000; padding: 2rem; color: #991b1b; font-family: monospace; overflow: auto; }
-        #import-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 20000; display: none; align-items: center; justify-content: center; flex-direction: column; color: white; }
     </style>
 </head>
 <body class="bg-brand-50 text-slate-800">
@@ -66,11 +65,6 @@
         <div class="spinner mb-4"></div>
         <h2 class="text-lg font-semibold tracking-tight text-slate-700">A iniciar sistema...</h2>
     </div>
-
-    <div id="import-overlay">
-        <div class="spinner mb-4" style="border-color: #ffffff40; border-top-color: #fff;"></div>
-        <h2 class="text-xl font-bold">A PROCESSAR...</h2>
-    </div>
     
     <div id="root"></div>
 
@@ -84,7 +78,7 @@
 
     <script type="text/babel">
         // ==========================================
-        // DADOS DAS EMPRESAS
+        // CONFIGURAÇÃO FIREBASE
         // ==========================================
         const CONSTANTES_EMPRESAS = {
             'MACBOOT': {
@@ -119,7 +113,9 @@
 
         const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- ÍCONES ---
+        // ==========================================
+        // ÍCONES
+        // ==========================================
         const Icons = {
             UserPlus: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>,
             Package: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
@@ -431,7 +427,6 @@
                         if(json.employees) {
                             json.employees.forEach(emp => {
                                 const ref = db.collection('artifacts').doc(appId).collection('employees').doc(emp.id || db.collection('artifacts').doc(appId).collection('employees').doc().id);
-                                // Garantir compatibilidade com sistema antigo: se não tiver company, assume MACBOOT
                                 ops.push({ type: 'set', ref, data: { ...emp, company: emp.company || 'MACBOOT', createdAt: new Date() } });
                             });
                         }
@@ -503,21 +498,17 @@
                         const colRef = db.collection('artifacts').doc(appId).collection(importType);
                         let added = 0;
                         
-                        // Importar começa na linha 1 (ignora header) ou 0 dependendo da config. 
-                        // sheet_to_json com header:1 retorna array de arrays.
-                        // O slice(1) remove o cabeçalho.
                         const rows = jsonData.slice(1);
                         
                         rows.forEach(row => {
                             if(row.length < 3) return;
                             const docRef = colRef.doc();
                             if(importType === 'employees') {
-                                // row[0]=Nome, row[1]=Função, row[2]=Setor
                                 batch.set(docRef, { 
                                     name: row[0], 
                                     role: row[1], 
                                     sector: row[2], 
-                                    company: importCompany, // Usa a empresa selecionada no modal
+                                    company: importCompany, 
                                     createdAt: new Date() 
                                 });
                                 added++;
@@ -586,18 +577,33 @@
                 if(!deliveryEmployeeId || deliveryCart.length === 0) return alert("Dados incompletos");
                 try {
                     const emp = employees.find(e => e.id === deliveryEmployeeId);
+                    
+                    // --- ALTERAÇÃO AQUI: GERAR UM BATCH_ID ÚNICO ---
+                    const batchId = new Date().getTime().toString() + Math.random().toString(36).substr(2, 5);
+
                     const batch = db.batch();
+                    
                     deliveryCart.forEach(item => {
                         const ref = db.collection('artifacts').doc(appId).collection('deliveries').doc();
                         batch.set(ref, {
-                            employeeId: emp.id, employeeName: emp.name, employeeRole: emp.role, employeeSector: emp.sector,
-                            epiId: item.id, epiName: item.name, epiCA: item.ca, quantityDelivered: item.qty,
-                            signature, status: signature ? 'signed' : 'pending', createdAt: new Date()
+                            employeeId: emp.id, 
+                            employeeName: emp.name, 
+                            employeeRole: emp.role, 
+                            employeeSector: emp.sector,
+                            epiId: item.id, 
+                            epiName: item.name, 
+                            epiCA: item.ca, 
+                            quantityDelivered: item.qty,
+                            signature, 
+                            status: signature ? 'signed' : 'pending', 
+                            createdAt: new Date(),
+                            batchId: batchId // Novo campo para agrupar
                         });
                         const invRef = db.collection('artifacts').doc(appId).collection('inventory').doc(item.id);
                         const safeCurrentQty = isNaN(item.quantity) ? 0 : item.quantity;
                         batch.update(invRef, { quantity: safeCurrentQty - item.qty });
                     });
+                    
                     await batch.commit();
                     toggleModal('delivery', false); toggleModal('sign', false); setDeliveryCart([]); setDeliveryEmployeeId('');
                     if(signature) { setSelectedEmployeeForReport(emp); setView('reports'); } else setView('pending-signatures');
@@ -607,8 +613,24 @@
             const signPendingDelivery = async (signature) => {
                 if (!pendingDeliveryToSign) return;
                 try {
-                    await db.collection('artifacts').doc(appId).collection('deliveries').doc(pendingDeliveryToSign.id)
-                        .update({ signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    const batch = db.batch();
+                    
+                    // Buscar todos os itens deste lote (mesmo batchId)
+                    // Se não tiver batchId (antigos), usa apenas o ID único
+                    let itemsToSign = [pendingDeliveryToSign];
+                    
+                    if (pendingDeliveryToSign.batchId) {
+                        // Encontrar todos os itens com o mesmo batchId nos dados carregados
+                        const batchItems = deliveries.filter(d => d.batchId === pendingDeliveryToSign.batchId && d.status === 'pending');
+                        if (batchItems.length > 0) itemsToSign = batchItems;
+                    }
+
+                    itemsToSign.forEach(item => {
+                        const ref = db.collection('artifacts').doc(appId).collection('deliveries').doc(item.id);
+                        batch.update(ref, { signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    });
+
+                    await batch.commit();
                     toggleModal('sign', false); setPendingDeliveryToSign(null);
                 } catch(err) { if (err.code === 'permission-denied') setPermissionError(true); else alert("Erro: " + err.message); }
             };
@@ -632,6 +654,27 @@
                 const matchesCompany = employeeCompanyFilter === 'TODOS' || (e.company || 'MACBOOT') === employeeCompanyFilter;
                 return matchesSearch && matchesCompany;
             });
+
+            // Agrupar entregas pendentes por batchId
+            const groupedPendingDeliveries = useMemo(() => {
+                const pending = deliveries.filter(d => d.status === 'pending');
+                const groups = {};
+                
+                pending.forEach(d => {
+                    const key = d.batchId || d.id; // Usa batchId se existir, senão ID único
+                    if (!groups[key]) {
+                        groups[key] = {
+                            ...d,
+                            items: [],
+                            totalItems: 0
+                        };
+                    }
+                    groups[key].items.push(d);
+                    groups[key].totalItems += 1;
+                });
+                
+                return Object.values(groups);
+            }, [deliveries]);
 
             if(!user) return <LoginScreen />;
 
@@ -815,13 +858,19 @@
                             
                             {view === 'pending-signatures' && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {deliveries.filter(d=>d.status==='pending').map(del=>(
-                                        <div key={del.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
-                                            <div><p className="font-bold text-slate-800">{del.employeeName}</p><p className="text-sm text-slate-500">{del.epiName} (x{del.quantityDelivered})</p></div>
-                                            <button onClick={()=>{setPendingDeliveryToSign(del); toggleModal('sign', true)}} className="mt-auto w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-bold">Coletar Assinatura</button>
+                                    {groupedPendingDeliveries.map(del=>(
+                                        <div key={del.batchId || del.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                                            <div>
+                                                <p className="font-bold text-slate-800 text-lg">{del.employeeName}</p>
+                                                <p className="text-sm text-slate-500 font-medium">
+                                                    {del.totalItems > 1 ? `${del.totalItems} itens para assinar` : `${del.epiName} (x${del.quantityDelivered})`}
+                                                </p>
+                                                <p className="text-xs text-slate-400 mt-2">{del.createdAt?.toDate().toLocaleString('pt-BR')}</p>
+                                            </div>
+                                            <button onClick={()=>{setPendingDeliveryToSign(del); toggleModal('sign', true)}} className="mt-auto w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-brand-700 transition-colors">Coletar Assinatura</button>
                                         </div>
                                     ))}
-                                    {deliveries.filter(d=>d.status==='pending').length === 0 && <p className="col-span-full text-center text-slate-400 py-10">Nenhuma pendência.</p>}
+                                    {groupedPendingDeliveries.length === 0 && <p className="col-span-full text-center text-slate-400 py-10">Nenhuma pendência.</p>}
                                 </div>
                             )}
 
