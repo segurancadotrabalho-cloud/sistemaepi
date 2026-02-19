@@ -346,8 +346,13 @@
             const [employeeSearch, setEmployeeSearch] = useState('');
             const [employeeCompanyFilter, setEmployeeCompanyFilter] = useState('TODOS');
 
+            // --- ESTADOS NOVOS PARA EDIÇÃO EM MASSA E INDIVIDUAL ---
+            const [selectedEmployees, setSelectedEmployees] = useState([]);
+            const [editingEmployee, setEditingEmployee] = useState(null);
+            const [bulkCompanyId, setBulkCompanyId] = useState('');
+
             // Modais
-            const [modals, setModals] = useState({ import: false, addCompany: false, addEmp: false, addInv: false, addStock: false, delivery: false, sign: false, backup: false });
+            const [modals, setModals] = useState({ import: false, addCompany: false, addEmp: false, editEmp: false, bulkEdit: false, addInv: false, addStock: false, delivery: false, sign: false, backup: false });
             
             // Dados Form
             const [importType, setImportType] = useState(null);
@@ -592,6 +597,53 @@
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
+            // --- NOVAS FUNÇÕES PARA EDITAR COLABORADORES ---
+            const openEditEmployeeModal = (emp) => {
+                setEditingEmployee({...emp});
+                toggleModal('editEmp', true);
+            };
+
+            const handleUpdateEmployee = async () => {
+                if(!editingEmployee.name || !editingEmployee.companyId) return alert("Nome e Empresa são obrigatórios.");
+                try {
+                    await getRef('employees').doc(editingEmployee.id).update({
+                        name: editingEmployee.name,
+                        role: editingEmployee.role,
+                        sector: editingEmployee.sector,
+                        companyId: editingEmployee.companyId
+                    });
+                    toggleModal('editEmp', false);
+                    setEditingEmployee(null);
+                } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
+            };
+
+            // --- AÇÕES EM MASSA (LOTE) ---
+            const handleBulkDelete = async () => {
+                if(!confirm(`Tem a certeza que deseja excluir ${selectedEmployees.length} colaborador(es) permanentemente?`)) return;
+                try {
+                    const batch = db.batch();
+                    selectedEmployees.forEach(id => {
+                        batch.delete(getRef('employees').doc(id));
+                    });
+                    await batch.commit();
+                    setSelectedEmployees([]); // Limpa a seleção
+                } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
+            };
+
+            const handleBulkUpdateCompany = async () => {
+                if(!bulkCompanyId) return alert("Selecione a nova empresa.");
+                try {
+                    const batch = db.batch();
+                    selectedEmployees.forEach(id => {
+                        batch.update(getRef('employees').doc(id), { companyId: bulkCompanyId });
+                    });
+                    await batch.commit();
+                    toggleModal('bulkEdit', false);
+                    setSelectedEmployees([]);
+                    setBulkCompanyId('');
+                } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
+            };
+
             const handleAddInventory = async () => {
                 if(inventory.some(i => i.name === newInventory.name && i.ca === newInventory.ca)) return alert("Item já existe!");
                 try {
@@ -693,13 +745,30 @@
                 return matchesSearch && matchesCompany;
             });
 
+            // Handlers de Multi-Seleção de Colaboradores
+            const handleSelectAllEmployees = (e) => {
+                if (e.target.checked) {
+                    setSelectedEmployees(filteredEmployees.map(emp => emp.id));
+                } else {
+                    setSelectedEmployees([]);
+                }
+            };
+
+            const handleSelectEmployee = (id) => {
+                if (selectedEmployees.includes(id)) {
+                    setSelectedEmployees(selectedEmployees.filter(empId => empId !== id));
+                } else {
+                    setSelectedEmployees([...selectedEmployees, id]);
+                }
+            };
+
             // Agrupar entregas pendentes por batchId
             const groupedPendingDeliveries = useMemo(() => {
                 const pending = deliveries.filter(d => d.status === 'pending');
                 const groups = {};
                 
                 pending.forEach(d => {
-                    const key = d.batchId || d.id;
+                    const key = d.batchId || d.id; // Usa batchId se existir, senão ID único
                     if (!groups[key]) {
                         groups[key] = {
                             ...d,
@@ -854,8 +923,8 @@
                             )}
 
                             {view === 'employees' && (
-                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+                                    <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
                                         <h3 className="font-bold text-slate-800">Lista de Colaboradores</h3>
                                         <div className="flex gap-2">
                                             <button onClick={()=>toggleModal('addEmp', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button>
@@ -864,52 +933,93 @@
                                     </div>
 
                                     {/* SEARCH AND FILTER TOOLBAR */}
-                                    <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row gap-4">
-                                        <div className="relative flex-1">
-                                            <input 
-                                                type="text" 
-                                                placeholder="Pesquisar por nome ou função..." 
-                                                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all"
-                                                value={employeeSearch}
-                                                onChange={e => setEmployeeSearch(e.target.value)}
-                                            />
-                                            <div className="absolute left-3 top-2.5 text-slate-400">
-                                                <Icon name="Search" size={16} />
+                                    <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row gap-4 justify-between shrink-0">
+                                        <div className="flex flex-col md:flex-row gap-4 flex-1">
+                                            <div className="relative flex-1 max-w-md">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Pesquisar por nome ou função..." 
+                                                    className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all"
+                                                    value={employeeSearch}
+                                                    onChange={e => setEmployeeSearch(e.target.value)}
+                                                />
+                                                <div className="absolute left-3 top-2.5 text-slate-400">
+                                                    <Icon name="Search" size={16} />
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="w-full md:w-48">
-                                            <div className="relative">
-                                                <select 
-                                                    className="w-full p-2 pl-9 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 bg-white appearance-none cursor-pointer"
-                                                    value={employeeCompanyFilter}
-                                                    onChange={e => setEmployeeCompanyFilter(e.target.value)}
-                                                >
-                                                    <option value="TODOS">Todas Empresas</option>
-                                                    {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
-                                                </select>
-                                                <div className="absolute left-3 top-2.5 text-slate-400 pointer-events-none">
-                                                    <Icon name="Filter" size={16} />
+                                            <div className="w-full md:w-48">
+                                                <div className="relative">
+                                                    <select 
+                                                        className="w-full p-2 pl-9 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 bg-white appearance-none cursor-pointer"
+                                                        value={employeeCompanyFilter}
+                                                        onChange={e => setEmployeeCompanyFilter(e.target.value)}
+                                                    >
+                                                        <option value="TODOS">Todas Empresas</option>
+                                                        {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
+                                                    </select>
+                                                    <div className="absolute left-3 top-2.5 text-slate-400 pointer-events-none">
+                                                        <Icon name="Filter" size={16} />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Nome</th><th className="px-6 py-4">Empresa</th><th className="px-6 py-4">Função</th><th className="px-6 py-4 text-right">Ações</th></tr></thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {filteredEmployees.map(e=>(
-                                                <tr key={e.id} className="hover:bg-slate-50">
-                                                    <td className="px-6 py-4 font-medium">{e.name}</td>
-                                                    <td className="px-6 py-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">{getCompanyAlias(e)}</span></td>
-                                                    <td className="px-6 py-4 text-slate-500">{e.role}</td>
-                                                    <td className="px-6 py-4 text-right"><button onClick={()=>handleDelete('employees', e.id)} className="text-red-400 hover:text-red-600"><Icon name="Trash2"/></button></td>
+                                    {/* BARRA DE AÇÕES EM LOTE */}
+                                    {selectedEmployees.length > 0 && (
+                                        <div className="p-3 bg-brand-50 border-b border-brand-100 flex justify-between items-center animate-in fade-in shrink-0">
+                                            <span className="text-sm font-bold text-brand-800 px-2">{selectedEmployees.length} colaborador(es) selecionado(s)</span>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => toggleModal('bulkEdit', true)} className="text-xs font-bold bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors shadow-sm">Alterar Empresa</button>
+                                                <button onClick={handleBulkDelete} className="text-xs font-bold bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors shadow-sm">Excluir</button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="overflow-x-auto flex-1">
+                                        <table className="w-full text-left text-sm whitespace-nowrap">
+                                            <thead className="bg-slate-50 text-slate-500 font-medium sticky top-0 z-10 shadow-sm">
+                                                <tr>
+                                                    <th className="px-6 py-4 w-12 text-center">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            className="w-4 h-4 cursor-pointer accent-brand-600"
+                                                            checked={filteredEmployees.length > 0 && selectedEmployees.length === filteredEmployees.length}
+                                                            onChange={handleSelectAllEmployees}
+                                                        />
+                                                    </th>
+                                                    <th className="px-6 py-4">Nome</th>
+                                                    <th className="px-6 py-4">Empresa</th>
+                                                    <th className="px-6 py-4">Função</th>
+                                                    <th className="px-6 py-4 text-right">Ações</th>
                                                 </tr>
-                                            ))}
-                                            {filteredEmployees.length === 0 && (
-                                                <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-400 italic">Nenhum colaborador encontrado com os filtros atuais.</td></tr>
-                                            )}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {filteredEmployees.map(e=>(
+                                                    <tr key={e.id} className="hover:bg-slate-50 transition-colors">
+                                                        <td className="px-6 py-4 text-center">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                className="w-4 h-4 cursor-pointer accent-brand-600"
+                                                                checked={selectedEmployees.includes(e.id)}
+                                                                onChange={() => handleSelectEmployee(e.id)}
+                                                            />
+                                                        </td>
+                                                        <td className="px-6 py-4 font-medium text-slate-800">{e.name}</td>
+                                                        <td className="px-6 py-4"><span className="px-2 py-1 rounded text-[10px] font-bold bg-slate-200 text-slate-700 uppercase tracking-widest">{getCompanyAlias(e)}</span></td>
+                                                        <td className="px-6 py-4 text-slate-500">{e.role}</td>
+                                                        <td className="px-6 py-4 text-right flex justify-end gap-3">
+                                                            <button onClick={() => openEditEmployeeModal(e)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded transition-colors" title="Editar"><Icon name="PenLine" size={18}/></button>
+                                                            <button onClick={() => handleDelete('employees', e.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors" title="Excluir"><Icon name="Trash2" size={18}/></button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {filteredEmployees.length === 0 && (
+                                                    <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-400 italic">Nenhum colaborador encontrado com os filtros atuais.</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             )}
 
@@ -1045,6 +1155,49 @@
                             <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Função" value={newEmployee.role} onChange={e=>setNewEmployee({...newEmployee, role:e.target.value})} />
                             <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Setor" value={newEmployee.sector} onChange={e=>setNewEmployee({...newEmployee, sector:e.target.value})} />
                             <button onClick={handleAddEmployee} disabled={!newEmployee.companyId} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900 disabled:opacity-50">Salvar</button>
+                        </div>
+                    </Modal>
+
+                    {/* MODAL EDITAR COLABORADOR */}
+                    <Modal isOpen={modals.editEmp} onClose={() => { toggleModal('editEmp', false); setEditingEmployee(null); }} title="Editar Colaborador">
+                        {editingEmployee && (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Empresa Vinculada</label>
+                                    <select className="w-full p-3 border rounded-lg outline-none bg-white mt-1" value={editingEmployee.companyId || ''} onChange={e=>setEditingEmployee({...editingEmployee, companyId:e.target.value})}>
+                                        <option value="">Selecione a empresa...</option>
+                                        {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
+                                    <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 mt-1" placeholder="Nome Completo" value={editingEmployee.name} onChange={e=>setEditingEmployee({...editingEmployee, name:e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Função</label>
+                                    <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 mt-1" placeholder="Função" value={editingEmployee.role} onChange={e=>setEditingEmployee({...editingEmployee, role:e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Setor</label>
+                                    <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 mt-1" placeholder="Setor" value={editingEmployee.sector} onChange={e=>setEditingEmployee({...editingEmployee, sector:e.target.value})} />
+                                </div>
+                                <button onClick={handleUpdateEmployee} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900 mt-4 transition-colors">Salvar Alterações</button>
+                            </div>
+                        )}
+                    </Modal>
+
+                    {/* MODAL ALTERAR EMPRESA EM LOTE */}
+                    <Modal isOpen={modals.bulkEdit} onClose={() => toggleModal('bulkEdit', false)} title="Mudar Empresa (Lote)">
+                        <div className="space-y-6">
+                            <p className="text-sm text-slate-600 leading-relaxed">Você está prestes a alterar a empresa de <strong>{selectedEmployees.length}</strong> colaborador(es). Por favor, selecione a nova empresa abaixo:</p>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase">Nova Empresa Destino</label>
+                                <select className="w-full p-3 border rounded-lg outline-none bg-white mt-1 focus:ring-2 focus:ring-brand-500" value={bulkCompanyId} onChange={e=>setBulkCompanyId(e.target.value)}>
+                                    <option value="">Selecione...</option>
+                                    {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
+                                </select>
+                            </div>
+                            <button onClick={handleBulkUpdateCompany} disabled={!bulkCompanyId} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900 disabled:opacity-50 transition-colors">Confirmar Migração</button>
                         </div>
                     </Modal>
 
