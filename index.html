@@ -148,8 +148,7 @@
             BarChart: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
             Database: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
             DownloadCloud: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>,
-            Filter: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
-            Fingerprint: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 6"/><path d="M5 15.18A10 10 0 0 1 12 19c2.76 0 5.26-1.12 7-2.93"/><path d="M8.5 12c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5"/><path d="M12 8v4"/><path d="M12 12c2.76 0 5 2.24 5 5"/></svg>
+            Filter: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         };
         const Icon = ({ name, size = 20, className }) => { const Ico = Icons[name]; return Ico ? <Ico width={size} height={size} className={className} /> : null; };
 
@@ -163,7 +162,7 @@
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden p-8 text-center space-y-6">
                         <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto"><Icon name="AlertTriangle" size={32} /></div>
-                        <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações. Verifique as regras.</p></div>
+                        <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações.</p></div>
                         <button onClick={onClose} className="w-full py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors uppercase text-sm">Entendi</button>
                     </div>
                 </div>
@@ -223,7 +222,6 @@
             );
         };
 
-        // --- SIGNATURE PAD CORRIGIDO ---
         const SignaturePad = ({ onSave, onCancel }) => {
             const canvasRef = useRef(null);
             const isDrawing = useRef(false);
@@ -236,11 +234,8 @@
                     c.width = r.width;
                     c.height = r.height;
                     const ctx = c.getContext('2d');
-                    ctx.lineWidth = 4;
-                    ctx.lineCap = 'round';
-                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
                 };
-                
                 setTimeout(resize, 100);
                 window.addEventListener('resize', resize);
                 return () => window.removeEventListener('resize', resize);
@@ -284,6 +279,7 @@
             return (
                 <div className="flex flex-col h-full bg-slate-100">
                     <div className="flex-1 m-4 bg-white rounded-xl shadow-inner border border-slate-300 relative">
+                        {/* Canvas com touch-action none para evitar scroll no mobile */}
                         <canvas 
                             ref={canvasRef}
                             className="block w-full h-full cursor-crosshair touch-none"
@@ -333,10 +329,10 @@
                     <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
                         <div className="text-center mb-8">
                             <div className="w-16 h-16 bg-brand-700 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg"><Icon name="ShieldCheck" size={40} /></div>
-                            <h2 className="text-2xl font-bold text-slate-800">EPI MACBOOT</h2><p className="text-slate-500 text-sm mt-1">Acesso Restrito</p>
+                            <h2 className="text-2xl font-bold text-slate-800">SISTEMA EPI</h2><p className="text-slate-500 text-sm mt-1">Acesso Restrito</p>
                         </div>
                         <form onSubmit={handleLogin} className="space-y-4">
-                            <div><label className="text-xs font-bold text-slate-600 uppercase">Email</label><input type="email" required className="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500" value={email} onChange={e=>setEmail(e.target.value)} /></div>
+                            <div><label className="text-xs font-bold text-slate-600 uppercase">Email do Cliente</label><input type="email" required className="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500" value={email} onChange={e=>setEmail(e.target.value)} /></div>
                             <div><label className="text-xs font-bold text-slate-600 uppercase">Senha</label><input type="password" required className="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500" value={pass} onChange={e=>setPass(e.target.value)} /></div>
                             <div className="flex items-center gap-2">
                                 <input type="checkbox" id="remember" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="rounded border-gray-300 text-brand-700 focus:ring-brand-500"/>
@@ -379,6 +375,12 @@
             const [deliveryCart, setDeliveryCart] = useState([]);
             const [pendingDeliveryToSign, setPendingDeliveryToSign] = useState(null);
             const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState(null);
+
+            // --- NOVO: FUNÇÃO PARA ISOLAR DADOS POR UTILIZADOR (MULTI-TENANT SaaS) ---
+            const getRef = (collectionName) => {
+                // Em vez de usar a pasta public, usa a pasta correspondente ao UID de quem fez login
+                return db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection(collectionName);
+            };
 
             // Métrica do Dashboard
             const dashboardMetrics = useMemo(() => {
@@ -428,32 +430,183 @@
                 return unsub;
             }, []);
 
+            // --- CARREGAMENTO DE DADOS ISOLADOS ---
             useEffect(() => {
                 if(!user || !db) return;
                 const err = (e) => { console.error(e); if(e.code === 'permission-denied') setPermissionError(true); };
-                const un1 = db.collection('artifacts').doc(appId).collection('employees').onSnapshot(s => setEmployees(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
-                const un2 = db.collection('artifacts').doc(appId).collection('inventory').onSnapshot(s => setInventory(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
-                const un3 = db.collection('artifacts').doc(appId).collection('deliveries').orderBy('createdAt', 'desc').onSnapshot(s => setDeliveries(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
+                
+                // Usando a nova função getRef para ler apenas os dados do utilizador logado
+                const un1 = getRef('employees').onSnapshot(s => setEmployees(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
+                const un2 = getRef('inventory').onSnapshot(s => setInventory(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
+                const un3 = getRef('deliveries').orderBy('createdAt', 'desc').onSnapshot(s => setDeliveries(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
+                
                 return () => { un1(); un2(); un3(); };
             }, [user]);
 
             // Funções
             const toggleModal = (name, val) => setModals(prev => ({...prev, [name]: val}));
 
-            // --- FUNÇÃO DE HASHING (SIMULAÇÃO DE ASSINATURA DIGITAL) ---
-            const generateHash = (str) => {
-                let hash = 0;
-                for (let i = 0; i < str.length; i++) {
-                    const char = str.charCodeAt(i);
-                    hash = ((hash << 5) - hash) + char;
-                    hash = hash & hash;
-                }
-                return Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
+            // --- RESTAURAR (MIGRAÇÃO) PARA A CONTA PRIVADA ---
+            const importData = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const loader = document.getElementById('initial-loader');
+                if(loader) { loader.style.display = 'flex'; loader.innerHTML = '<h2 class="text-xl font-bold">RESTAURANDO...</h2>'; }
+
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const json = JSON.parse(event.target.result);
+                        const BATCH_SIZE = 400;
+                        let ops = [];
+
+                        if(json.employees) {
+                            json.employees.forEach(emp => {
+                                const ref = getRef('employees').doc(emp.id || getRef('employees').doc().id);
+                                ops.push({ type: 'set', ref, data: { ...emp, company: emp.company || 'MACBOOT', createdAt: new Date() } });
+                            });
+                        }
+                        if(json.inventory) {
+                            json.inventory.forEach(inv => {
+                                const ref = getRef('inventory').doc(inv.id || getRef('inventory').doc().id);
+                                const safeQty = isNaN(parseInt(inv.quantity)) ? 0 : parseInt(inv.quantity);
+                                ops.push({ type: 'set', ref, data: { ...inv, quantity: safeQty, createdAt: new Date() } });
+                            });
+                        }
+                        if(json.deliveries) {
+                            json.deliveries.forEach(del => {
+                                const ref = getRef('deliveries').doc(del.id || getRef('deliveries').doc().id);
+                                ops.push({ type: 'set', ref, data: { ...del, createdAt: new Date(del.createdAt) } });
+                            });
+                        }
+
+                        for (let i = 0; i < ops.length; i += BATCH_SIZE) {
+                            const batch = db.batch();
+                            ops.slice(i, i + BATCH_SIZE).forEach(op => batch.set(op.ref, op.data));
+                            await batch.commit();
+                        }
+
+                        alert("Restauração concluída na sua conta!");
+                        toggleModal('backup', false);
+                    } catch (err) {
+                        alert("Erro: " + err.message);
+                    } finally {
+                        if(loader) loader.style.display = 'none';
+                        e.target.value = '';
+                    }
+                };
+                reader.readAsText(file);
             };
 
-            const generateDigitalSignature = (delivery) => {
-                const raw = `${delivery.employeeId}-${delivery.epiId}-${delivery.createdAt.toISOString()}-${delivery.quantityDelivered}`;
-                return `EPI-${generateHash(raw)}-${new Date().getFullYear()}`;
+            const exportData = () => {
+                const data = {
+                    employees,
+                    inventory,
+                    deliveries: deliveries.map(d => ({
+                        ...d,
+                        createdAt: d.createdAt?.toDate ? d.createdAt.toDate().toISOString() : d.createdAt
+                    }))
+                };
+                const jsonString = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonString], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_sistema_epi_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+
+            // --- IMPORTAR EXCEL ---
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const data = new Uint8Array(evt.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+
+                        const batch = db.batch();
+                        const colRef = getRef(importType);
+                        let added = 0;
+                        
+                        const rows = jsonData.slice(1);
+                        
+                        rows.forEach(row => {
+                            if(row.length < 3) return;
+                            const docRef = colRef.doc();
+                            if(importType === 'employees') {
+                                batch.set(docRef, { 
+                                    name: row[0], 
+                                    role: row[1], 
+                                    sector: row[2], 
+                                    company: importCompany, 
+                                    createdAt: new Date() 
+                                });
+                                added++;
+                            } else if(importType === 'inventory') {
+                                const name = row[0]; const ca = row[2];
+                                if(!inventory.some(i => i.name === name && i.ca === ca)) {
+                                    batch.set(docRef, { name: row[0], complement: row[1]||'', ca: row[2], quantity: parseInt(row[3])||0, createdAt: new Date() });
+                                    added++;
+                                }
+                            }
+                        });
+
+                        batch.commit().then(() => {
+                            alert(`${added} registos importados!`);
+                            toggleModal('import', false);
+                        }).catch(err => {
+                            if(err.code === 'permission-denied') setPermissionError(true);
+                            else alert("Erro ao importar: " + err.message);
+                        });
+                    } catch(err) { alert("Erro ao ler ficheiro: " + err.message); }
+                };
+                reader.readAsArrayBuffer(file);
+            };
+            
+            const handleDelete = async (col, id) => {
+                if(!confirm("Tem a certeza?")) return;
+                try { await getRef(col).doc(id).delete(); }
+                catch(e) { if(e.code==='permission-denied') setPermissionError(true); else alert(e.message); }
+            };
+
+            const handleAddEmployee = async () => {
+                try {
+                    await getRef('employees').add({...newEmployee, createdAt: new Date()});
+                    toggleModal('addEmp', false); setNewEmployee({name:'', role:'', sector:'', company: 'MACBOOT'});
+                } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
+            };
+
+            const handleAddInventory = async () => {
+                if(inventory.some(i => i.name === newInventory.name && i.ca === newInventory.ca)) return alert("Item já existe!");
+                try {
+                    await getRef('inventory').add({...newInventory, quantity: +newInventory.quantity, createdAt: new Date()});
+                    toggleModal('addInv', false); setNewInventory({name:'', ca:'', quantity:0});
+                } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
+            };
+
+            const handleAddStock = async () => {
+                const currentQty = isNaN(parseInt(stockToAdd.current)) ? 0 : parseInt(stockToAdd.current);
+                const addQty = parseInt(stockToAdd.add);
+                if(isNaN(addQty) || addQty <= 0) return alert("Quantidade inválida.");
+                try {
+                    await getRef('inventory').doc(stockToAdd.id).update({ quantity: currentQty + addQty });
+                    toggleModal('addStock', false);
+                } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
+            };
+
+            const addToCart = () => {
+                if(!currentEpiSelection.id) return alert("Selecione um EPI.");
+                const epi = inventory.find(i => i.id === currentEpiSelection.id);
+                if (!epi || epi.quantity < currentEpiSelection.qty) return alert("Estoque insuficiente.");
+                if (deliveryCart.some(i => i.id === epi.id)) return alert("Item já está na lista.");
+                setDeliveryCart([...deliveryCart, { ...epi, qty: parseInt(currentEpiSelection.qty) }]);
+                setCurrentEpiSelection({ id: '', qty: 1 });
             };
 
             const processDelivery = async (signature = null) => {
@@ -462,17 +615,10 @@
                     const emp = employees.find(e => e.id === deliveryEmployeeId);
                     const batchId = new Date().getTime().toString() + Math.random().toString(36).substr(2, 5);
                     const batch = db.batch();
-                    
-                    // Metadata de Auditoria
-                    const auditMeta = {
-                        userAgent: navigator.userAgent,
-                        platform: navigator.platform,
-                        timestamp: new Date().toISOString()
-                    };
 
                     deliveryCart.forEach(item => {
-                        const ref = db.collection('artifacts').doc(appId).collection('deliveries').doc();
-                        const deliveryData = {
+                        const ref = getRef('deliveries').doc();
+                        batch.set(ref, {
                             employeeId: emp.id, 
                             employeeName: emp.name, 
                             employeeRole: emp.role, 
@@ -485,18 +631,9 @@
                             signature, 
                             status: signature ? 'signed' : 'pending', 
                             createdAt: new Date(),
-                            batchId: batchId,
-                            auditMeta: signature ? auditMeta : null // Só grava auditoria se assinado
-                        };
-
-                        // Gerar hash de integridade se assinado
-                        if (signature) {
-                            deliveryData.digitalHash = generateDigitalSignature({...deliveryData, createdAt: new Date()});
-                        }
-
-                        batch.set(ref, deliveryData);
-                        
-                        const invRef = db.collection('artifacts').doc(appId).collection('inventory').doc(item.id);
+                            batchId: batchId 
+                        });
+                        const invRef = getRef('inventory').doc(item.id);
                         const safeCurrentQty = isNaN(item.quantity) ? 0 : item.quantity;
                         batch.update(invRef, { quantity: safeCurrentQty - item.qty });
                     });
@@ -518,23 +655,9 @@
                         if (batchItems.length > 0) itemsToSign = batchItems;
                     }
 
-                    const auditMeta = {
-                        userAgent: navigator.userAgent,
-                        platform: navigator.platform,
-                        timestamp: new Date().toISOString()
-                    };
-
                     itemsToSign.forEach(item => {
-                        const ref = db.collection('artifacts').doc(appId).collection('deliveries').doc(item.id);
-                        const digitalHash = generateDigitalSignature({...item, createdAt: item.createdAt.toDate()}); // Usa dados originais para hash
-                        
-                        batch.update(ref, { 
-                            signature, 
-                            status: 'signed', 
-                            signedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                            auditMeta,
-                            digitalHash
-                        });
+                        const ref = getRef('deliveries').doc(item.id);
+                        batch.update(ref, { signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
                     });
 
                     await batch.commit();
@@ -542,21 +665,7 @@
                 } catch(err) { if (err.code === 'permission-denied') setPermissionError(true); else alert("Erro: " + err.message); }
             };
 
-            // Resto das funções (Import, Add, Delete) continuam iguais...
-            const handleDelete = async (col, id) => { if(!confirm("Tem a certeza?")) return; try { await db.collection('artifacts').doc(appId).collection(col).doc(id).delete(); } catch(e) { if(e.code==='permission-denied') setPermissionError(true); } };
-            const handleAddEmployee = async () => { try { await db.collection('artifacts').doc(appId).collection('employees').add({...newEmployee, createdAt: new Date()}); toggleModal('addEmp', false); setNewEmployee({name:'', role:'', sector:'', company: 'MACBOOT'}); } catch(e) { if(e.code==='permission-denied') setPermissionError(true); } };
-            const handleAddInventory = async () => { if(inventory.some(i => i.name === newInventory.name && i.ca === newInventory.ca)) return alert("Item já existe!"); try { await db.collection('artifacts').doc(appId).collection('inventory').add({...newInventory, quantity: +newInventory.quantity, createdAt: new Date()}); toggleModal('addInv', false); setNewInventory({name:'', ca:'', quantity:0}); } catch(e) { if(e.code==='permission-denied') setPermissionError(true); } };
-            const handleAddStock = async () => { const currentQty = isNaN(parseInt(stockToAdd.current)) ? 0 : parseInt(stockToAdd.current); const addQty = parseInt(stockToAdd.add); if(isNaN(addQty) || addQty <= 0) return alert("Quantidade inválida."); try { await db.collection('artifacts').doc(appId).collection('inventory').doc(stockToAdd.id).update({ quantity: currentQty + addQty }); toggleModal('addStock', false); } catch(e) { if(e.code==='permission-denied') setPermissionError(true); } };
-            const addToCart = () => { if(!currentEpiSelection.id) return alert("Selecione um EPI."); const epi = inventory.find(i => i.id === currentEpiSelection.id); if (!epi || epi.quantity < currentEpiSelection.qty) return alert("Estoque insuficiente."); if (deliveryCart.some(i => i.id === epi.id)) return alert("Item já está na lista."); setDeliveryCart([...deliveryCart, { ...epi, qty: parseInt(currentEpiSelection.qty) }]); setCurrentEpiSelection({ id: '', qty: 1 }); };
             const handleLogout = () => { auth.signOut(); };
-            
-            // Import/Export simplificados para poupar espaço
-            const exportData = () => { const data = { employees, inventory, deliveries: deliveries.map(d => ({...d, createdAt: d.createdAt?.toDate ? d.createdAt.toDate().toISOString() : d.createdAt})) }; const jsonString = JSON.stringify(data, null, 2); const blob = new Blob([jsonString], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `backup_macboot_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
-            const importData = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (event) => { try { const json = JSON.parse(event.target.result); const BATCH_SIZE = 400; let ops = []; if(json.employees) json.employees.forEach(emp => { const ref = db.collection('artifacts').doc(appId).collection('employees').doc(emp.id || db.collection('artifacts').doc(appId).collection('employees').doc().id); ops.push({ type: 'set', ref, data: { ...emp, company: emp.company || 'MACBOOT', createdAt: new Date() } }); }); if(json.inventory) json.inventory.forEach(inv => { const ref = db.collection('artifacts').doc(appId).collection('inventory').doc(inv.id || db.collection('artifacts').doc(appId).collection('inventory').doc().id); const safeQty = isNaN(parseInt(inv.quantity)) ? 0 : parseInt(inv.quantity); ops.push({ type: 'set', ref, data: { ...inv, quantity: safeQty, createdAt: new Date() } }); }); if(json.deliveries) json.deliveries.forEach(del => { const ref = db.collection('artifacts').doc(appId).collection('deliveries').doc(del.id || db.collection('artifacts').doc(appId).collection('deliveries').doc().id); ops.push({ type: 'set', ref, data: { ...del, createdAt: new Date(del.createdAt) } }); }); for (let i = 0; i < ops.length; i += BATCH_SIZE) { const batch = db.batch(); ops.slice(i, i + BATCH_SIZE).forEach(op => batch.set(op.ref, op.data)); await batch.commit(); } alert("Restauração concluída!"); toggleModal('backup', false); } catch (err) { alert("Erro: " + err.message); } e.target.value = ''; }; reader.readAsText(file); };
-            const handleFileUpload = (e) => { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (evt) => { try { const data = new Uint8Array(evt.target.result); const workbook = XLSX.read(data, {type: 'array'}); const firstSheet = workbook.Sheets[workbook.SheetNames[0]]; const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1}); const batch = db.batch(); const colRef = db.collection('artifacts').doc(appId).collection(importType); let added = 0; jsonData.slice(1).forEach(row => { if(row.length < 3) return; const docRef = colRef.doc(); if(importType === 'employees') { batch.set(docRef, { name: row[0], role: row[1], sector: row[2], company: importCompany, createdAt: new Date() }); added++; } else if(importType === 'inventory') { const name = row[0]; const ca = row[2]; if(!inventory.some(i => i.name === name && i.ca === ca)) { batch.set(docRef, { name: row[0], complement: row[1]||'', ca: row[2], quantity: parseInt(row[3])||0, createdAt: new Date() }); added++; } } }); batch.commit().then(() => { alert(`${added} registos importados!`); toggleModal('import', false); }); } catch(err) { alert("Erro ao ler ficheiro."); } }; reader.readAsArrayBuffer(file); };
-
-            const employeeOptions = employees.map(e => ({ value: e.id, label: e.name, main: e.name, sub: `${e.role} - ${e.sector} [${e.company||'MAC'}]` }));
-            const epiOptions = inventory.filter(i => i.quantity > 0).map(i => ({ value: i.id, label: i.name, main: i.name, sub: `CA: ${i.ca} | Disp: ${i.quantity}` }));
 
             const SidebarItem = ({ icon, label, id, count }) => (
                 <button onClick={() => { setView(id); setSidebarOpen(false); setSelectedEmployeeForReport(null); setReportSearch(''); }} className={`flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all mb-1 ${view === id ? 'bg-brand-700 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
@@ -577,12 +686,20 @@
             const groupedPendingDeliveries = useMemo(() => {
                 const pending = deliveries.filter(d => d.status === 'pending');
                 const groups = {};
+                
                 pending.forEach(d => {
-                    const key = d.batchId || d.id;
-                    if (!groups[key]) groups[key] = { ...d, items: [], totalItems: 0 };
+                    const key = d.batchId || d.id; // Usa batchId se existir, senão ID único
+                    if (!groups[key]) {
+                        groups[key] = {
+                            ...d,
+                            items: [],
+                            totalItems: 0
+                        };
+                    }
                     groups[key].items.push(d);
                     groups[key].totalItems += 1;
                 });
+                
                 return Object.values(groups);
             }, [deliveries]);
 
@@ -594,7 +711,7 @@
                     
                     {/* SIDEBAR */}
                     <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-                        <div className="h-16 flex items-center px-6 border-b border-slate-100 font-bold text-brand-900 gap-2"><Icon name="ShieldCheck" size={24}/> EPI MACBOOT</div>
+                        <div className="h-16 flex items-center px-6 border-b border-slate-100 font-bold text-brand-900 gap-2"><Icon name="ShieldCheck" size={24}/> EPI SYSTEM</div>
                         <nav className="p-4 space-y-1">
                             <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-2">Gestão</p>
                             <SidebarItem icon="ClipboardCheck" label="Visão Geral" id="dashboard" />
@@ -604,10 +721,14 @@
                             <button onClick={()=>toggleModal('delivery', true)} className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-brand-700 bg-brand-50 rounded-lg hover:bg-brand-100 border border-brand-100 transition-all mb-1"><Icon name="Plus" size={18} /> Nova Entrega</button>
                             <SidebarItem icon="Clock" label="Assinaturas" id="pending-signatures" count={deliveries.filter(d=>d.status==='pending').length} />
                             <SidebarItem icon="FileText" label="Relatórios" id="reports" />
+                            
                             <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-6">Sistema</p>
                             <button onClick={()=>toggleModal('backup', true)} className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-all mb-1"><Icon name="Database" size={18} /> Backup / Migração</button>
                         </nav>
-                        <div className="absolute bottom-0 w-full p-4 border-t border-slate-100"><button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-2 text-red-600 text-xs font-bold hover:bg-red-50 rounded-lg"><Icon name="LogOut"/> Sair</button></div>
+                        <div className="absolute bottom-0 w-full p-4 border-t border-slate-100">
+                            <div className="text-center text-xs text-slate-400 mb-2 truncate px-2">{user.email}</div>
+                            <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-2 text-red-600 text-xs font-bold hover:bg-red-50 rounded-lg"><Icon name="LogOut"/> Sair</button>
+                        </div>
                     </aside>
 
                     {/* MAIN */}
@@ -615,42 +736,78 @@
                         <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 lg:px-8 justify-between no-print">
                             <button className="lg:hidden text-slate-500" onClick={()=>setSidebarOpen(!isSidebarOpen)}><Icon name="Menu"/></button>
                             <h2 className="font-bold text-slate-800">{view.toUpperCase().replace('-',' ')}</h2>
-                            <div className="text-xs font-medium text-slate-500">{user.email}</div>
                         </header>
 
                         <div className="flex-1 overflow-y-auto p-4 lg:p-8">
                             {view === 'dashboard' && (
                                 <div className="space-y-6">
+                                    {/* CARTÕES SUPERIORES (TOTAL GERAL) */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><p className="text-sm text-slate-500 font-bold">COLABORADORES</p><p className="text-3xl font-bold mt-2 text-slate-800">{employees.length}</p></div>
                                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><p className="text-sm text-slate-500 font-bold">ITENS EM ESTOQUE</p><p className="text-3xl font-bold mt-2 text-slate-800">{inventory.length}</p></div>
                                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><p className="text-sm text-slate-500 font-bold">ENTREGAS TOTAIS</p><p className="text-3xl font-bold mt-2 text-slate-800">{deliveries.filter(d=>d.status==='signed').length}</p></div>
                                     </div>
+
+                                    {/* CONSUMO E SAÍDAS */}
                                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                                         <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-wide text-sm"><Icon name="BarChart" size={18}/> Previsão de Consumo de EPIs</h3>
+                                        
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 flex flex-col items-center"><span className="text-blue-600 font-bold text-xs uppercase">Hoje</span><span className="text-2xl font-black text-blue-900 mt-1">{dashboardMetrics.today}</span></div>
-                                            <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex flex-col items-center"><span className="text-indigo-600 font-bold text-xs uppercase">Esta Semana</span><span className="text-2xl font-black text-indigo-900 mt-1">{dashboardMetrics.week}</span></div>
-                                            <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 flex flex-col items-center"><span className="text-purple-600 font-bold text-xs uppercase">Este Mês</span><span className="text-2xl font-black text-purple-900 mt-1">{dashboardMetrics.month}</span></div>
+                                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 flex flex-col items-center">
+                                                <span className="text-blue-600 font-bold text-xs uppercase">Hoje</span>
+                                                <span className="text-2xl font-black text-blue-900 mt-1">{dashboardMetrics.today}</span>
+                                                <span className="text-[10px] text-blue-400">unidades</span>
+                                            </div>
+                                            <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex flex-col items-center">
+                                                <span className="text-indigo-600 font-bold text-xs uppercase">Esta Semana</span>
+                                                <span className="text-2xl font-black text-indigo-900 mt-1">{dashboardMetrics.week}</span>
+                                                <span className="text-[10px] text-indigo-400">unidades</span>
+                                            </div>
+                                            <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 flex flex-col items-center">
+                                                <span className="text-purple-600 font-bold text-xs uppercase">Este Mês</span>
+                                                <span className="text-2xl font-black text-purple-900 mt-1">{dashboardMetrics.month}</span>
+                                                <span className="text-[10px] text-purple-400">unidades</span>
+                                            </div>
                                         </div>
+
                                         <div>
                                             <h4 className="text-xs font-bold text-slate-500 uppercase mb-3 border-b pb-2">Detalhamento por Item (Fluxo de Saída)</h4>
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-sm text-left">
-                                                    <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="py-3 px-3 rounded-l-lg">EPI</th><th className="py-3 px-3">C.A.</th><th className="py-3 px-3 text-center text-blue-600">Dia</th><th className="py-3 px-3 text-center text-indigo-600">Semana</th><th className="py-3 px-3 text-center text-purple-600 rounded-r-lg">Mês</th></tr></thead>
+                                                    <thead className="bg-slate-50 text-slate-500 font-medium">
+                                                        <tr>
+                                                            <th className="py-3 px-3 rounded-l-lg">EPI</th>
+                                                            <th className="py-3 px-3">C.A.</th>
+                                                            <th className="py-3 px-3 text-center text-blue-600">Dia</th>
+                                                            <th className="py-3 px-3 text-center text-indigo-600">Semana</th>
+                                                            <th className="py-3 px-3 text-center text-purple-600 rounded-r-lg">Mês</th>
+                                                        </tr>
+                                                    </thead>
                                                     <tbody className="divide-y divide-slate-100">
                                                         {dashboardMetrics.fullReport.length > 0 ? dashboardMetrics.fullReport.map((item, idx) => (
-                                                            <tr key={idx} className="hover:bg-slate-50 transition-colors"><td className="py-3 px-3 font-bold text-slate-700">{item.name}</td><td className="py-3 px-3 text-xs text-slate-500 font-mono">{item.ca}</td><td className="py-3 px-3 text-center font-bold text-blue-900 bg-blue-50/50">{item.today > 0 ? item.today : '-'}</td><td className="py-3 px-3 text-center font-bold text-indigo-900 bg-indigo-50/50">{item.week > 0 ? item.week : '-'}</td><td className="py-3 px-3 text-center font-bold text-purple-900 bg-purple-50/50">{item.month > 0 ? item.month : '-'}</td></tr>
-                                                        )) : (<tr><td colSpan="5" className="py-8 text-center text-slate-400 italic">Sem dados de consumo registados ainda.</td></tr>)}
+                                                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                                <td className="py-3 px-3 font-bold text-slate-700">{item.name}</td>
+                                                                <td className="py-3 px-3 text-xs text-slate-500 font-mono">{item.ca}</td>
+                                                                <td className="py-3 px-3 text-center font-bold text-blue-900 bg-blue-50/50">{item.today > 0 ? item.today : '-'}</td>
+                                                                <td className="py-3 px-3 text-center font-bold text-indigo-900 bg-indigo-50/50">{item.week > 0 ? item.week : '-'}</td>
+                                                                <td className="py-3 px-3 text-center font-bold text-purple-900 bg-purple-50/50">{item.month > 0 ? item.month : '-'}</td>
+                                                            </tr>
+                                                        )) : (
+                                                            <tr><td colSpan="5" className="py-8 text-center text-slate-400 italic">Sem dados de consumo registados ainda.</td></tr>
+                                                        )}
                                                     </tbody>
                                                 </table>
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* ALERTAS DE ESTOQUE */}
                                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Icon name="AlertTriangle" className="text-amber-500"/> Níveis de Estoque Crítico</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {inventory.filter(i => i.quantity < 5).map(item => (<div key={item.id} className="p-4 bg-amber-50 border border-amber-100 rounded-lg flex justify-between items-center"><div><p className="font-bold text-slate-800">{item.name}</p><p className="text-xs text-amber-700 font-medium">CA: {item.ca}</p></div><span className="text-xl font-bold text-amber-600">{isNaN(item.quantity) ? 'Erro' : item.quantity} un</span></div>))}
+                                            {inventory.filter(i => i.quantity < 5).map(item => (
+                                                <div key={item.id} className="p-4 bg-amber-50 border border-amber-100 rounded-lg flex justify-between items-center"><div><p className="font-bold text-slate-800">{item.name}</p><p className="text-xs text-amber-700 font-medium">CA: {item.ca}</p></div><span className="text-xl font-bold text-amber-600">{isNaN(item.quantity) ? 'Erro' : item.quantity} un</span></div>
+                                            ))}
                                             {inventory.filter(i => i.quantity < 5).length === 0 && <p className="text-sm text-slate-400 italic">Todos os itens com estoque adequado.</p>}
                                         </div>
                                     </div>
@@ -661,13 +818,60 @@
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                                     <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <h3 className="font-bold text-slate-800">Lista de Colaboradores</h3>
-                                        <div className="flex gap-2"><button onClick={()=>toggleModal('addEmp', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button><button onClick={()=>{setImportType('employees'); toggleModal('import', true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button></div>
+                                        <div className="flex gap-2">
+                                            <button onClick={()=>toggleModal('addEmp', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button>
+                                            <button onClick={()=>{setImportType('employees'); toggleModal('import', true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button>
+                                        </div>
                                     </div>
+
+                                    {/* SEARCH AND FILTER TOOLBAR */}
                                     <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row gap-4">
-                                        <div className="relative flex-1"><input type="text" placeholder="Pesquisar por nome ou função..." className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all" value={employeeSearch} onChange={e => setEmployeeSearch(e.target.value)} /><div className="absolute left-3 top-2.5 text-slate-400"><Icon name="Search" size={16} /></div></div>
-                                        <div className="w-full md:w-48"><div className="relative"><select className="w-full p-2 pl-9 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 bg-white appearance-none cursor-pointer" value={employeeCompanyFilter} onChange={e => setEmployeeCompanyFilter(e.target.value)}><option value="TODOS">Todas Empresas</option><option value="MACBOOT">MACBOOT</option><option value="PESPONTO">PESPONTO</option></select><div className="absolute left-3 top-2.5 text-slate-400 pointer-events-none"><Icon name="Filter" size={16} /></div></div></div>
+                                        <div className="relative flex-1">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Pesquisar por nome ou função..." 
+                                                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all"
+                                                value={employeeSearch}
+                                                onChange={e => setEmployeeSearch(e.target.value)}
+                                            />
+                                            <div className="absolute left-3 top-2.5 text-slate-400">
+                                                <Icon name="Search" size={16} />
+                                            </div>
+                                        </div>
+                                        <div className="w-full md:w-48">
+                                            <div className="relative">
+                                                <select 
+                                                    className="w-full p-2 pl-9 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 bg-white appearance-none cursor-pointer"
+                                                    value={employeeCompanyFilter}
+                                                    onChange={e => setEmployeeCompanyFilter(e.target.value)}
+                                                >
+                                                    <option value="TODOS">Todas Empresas</option>
+                                                    <option value="MACBOOT">MACBOOT</option>
+                                                    <option value="PESPONTO">PESPONTO</option>
+                                                </select>
+                                                <div className="absolute left-3 top-2.5 text-slate-400 pointer-events-none">
+                                                    <Icon name="Filter" size={16} />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <table className="w-full text-left text-sm"><thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Nome</th><th className="px-6 py-4">Empresa</th><th className="px-6 py-4">Função</th><th className="px-6 py-4 text-right">Ações</th></tr></thead><tbody className="divide-y divide-slate-100">{filteredEmployees.map(e=>(<tr key={e.id} className="hover:bg-slate-50"><td className="px-6 py-4 font-medium">{e.name}</td><td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CONSTANTES_EMPRESAS[e.company||'MACBOOT'].cor} ${CONSTANTES_EMPRESAS[e.company||'MACBOOT'].texto}`}>{e.company || 'MACBOOT'}</span></td><td className="px-6 py-4 text-slate-500">{e.role}</td><td className="px-6 py-4 text-right"><button onClick={()=>handleDelete('employees', e.id)} className="text-red-400 hover:text-red-600"><Icon name="Trash2"/></button></td></tr>))}</tbody></table>
+
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Nome</th><th className="px-6 py-4">Empresa</th><th className="px-6 py-4">Função</th><th className="px-6 py-4 text-right">Ações</th></tr></thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {filteredEmployees.map(e=>(
+                                                <tr key={e.id} className="hover:bg-slate-50">
+                                                    <td className="px-6 py-4 font-medium">{e.name}</td>
+                                                    <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CONSTANTES_EMPRESAS[e.company||'MACBOOT']?.cor || 'bg-slate-800'} ${CONSTANTES_EMPRESAS[e.company||'MACBOOT']?.texto || 'text-white'}`}>{e.company || 'MACBOOT'}</span></td>
+                                                    <td className="px-6 py-4 text-slate-500">{e.role}</td>
+                                                    <td className="px-6 py-4 text-right"><button onClick={()=>handleDelete('employees', e.id)} className="text-red-400 hover:text-red-600"><Icon name="Trash2"/></button></td>
+                                                </tr>
+                                            ))}
+                                            {filteredEmployees.length === 0 && (
+                                                <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-400 italic">Nenhum colaborador encontrado com os filtros atuais.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             )}
 
@@ -682,7 +886,13 @@
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {groupedPendingDeliveries.map(del=>(
                                         <div key={del.batchId || del.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
-                                            <div><p className="font-bold text-slate-800 text-lg">{del.employeeName}</p><p className="text-sm text-slate-500 font-medium">{del.totalItems > 1 ? `${del.totalItems} itens para assinar` : `${del.epiName} (x${del.quantityDelivered})`}</p><p className="text-xs text-slate-400 mt-2">{del.createdAt?.toDate().toLocaleString('pt-BR')}</p></div>
+                                            <div>
+                                                <p className="font-bold text-slate-800 text-lg">{del.employeeName}</p>
+                                                <p className="text-sm text-slate-500 font-medium">
+                                                    {del.totalItems > 1 ? `${del.totalItems} itens para assinar` : `${del.epiName} (x${del.quantityDelivered})`}
+                                                </p>
+                                                <p className="text-xs text-slate-400 mt-2">{del.createdAt?.toDate().toLocaleString('pt-BR')}</p>
+                                            </div>
                                             <button onClick={()=>{setPendingDeliveryToSign(del); toggleModal('sign', true)}} className="mt-auto w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-brand-700 transition-colors">Coletar Assinatura</button>
                                         </div>
                                     ))}
@@ -694,31 +904,77 @@
                                 <div>
                                     {!selectedEmployeeForReport ? (
                                         <div className="space-y-4">
-                                            <div className="relative"><input type="text" placeholder="Buscar colaborador nos relatórios..." className="w-full p-4 pl-12 bg-white border border-slate-200 rounded-xl shadow-sm outline-none focus:border-brand-500 transition-all text-sm font-medium" value={reportSearch} onChange={(e) => setReportSearch(e.target.value)} /><div className="absolute left-4 top-4 text-slate-400"><Icon name="Search" size={20} /></div></div>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">{employees.filter(e => e.name.toLowerCase().includes(reportSearch.toLowerCase()) || e.role.toLowerCase().includes(reportSearch.toLowerCase())).map(e=>(<button key={e.id} onClick={()=>setSelectedEmployeeForReport(e)} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all relative overflow-hidden group"><div className={`absolute top-0 right-0 p-1.5 rounded-bl-lg text-[10px] font-bold text-white ${CONSTANTES_EMPRESAS[e.company||'MACBOOT'].cor}`}>{e.company || 'MAC'}</div><p className="font-bold text-slate-800">{e.name}</p><p className="text-xs text-slate-500 uppercase">{e.role}</p></button>))}</div>
+                                            {/* BARRA DE PESQUISA NOS RELATÓRIOS */}
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Buscar colaborador nos relatórios..."
+                                                    className="w-full p-4 pl-12 bg-white border border-slate-200 rounded-xl shadow-sm outline-none focus:border-brand-500 transition-all text-sm font-medium"
+                                                    value={reportSearch}
+                                                    onChange={(e) => setReportSearch(e.target.value)}
+                                                />
+                                                <div className="absolute left-4 top-4 text-slate-400">
+                                                    <Icon name="Search" size={20} />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                {employees
+                                                    .filter(e => e.name.toLowerCase().includes(reportSearch.toLowerCase()) || e.role.toLowerCase().includes(reportSearch.toLowerCase()))
+                                                    .map(e=>(
+                                                        <button key={e.id} onClick={()=>setSelectedEmployeeForReport(e)} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all relative overflow-hidden group">
+                                                            <div className={`absolute top-0 right-0 p-1.5 rounded-bl-lg text-[10px] font-bold text-white ${CONSTANTES_EMPRESAS[e.company||'MACBOOT']?.cor || 'bg-slate-800'}`}>{e.company || 'MAC'}</div>
+                                                            <p className="font-bold text-slate-800">{e.name}</p>
+                                                            <p className="text-xs text-slate-500 uppercase">{e.role}</p>
+                                                        </button>
+                                                    ))
+                                                }
+                                                {employees.length > 0 && employees.filter(e => e.name.toLowerCase().includes(reportSearch.toLowerCase())).length === 0 && (
+                                                    <div className="col-span-3 text-center py-8 text-slate-400">Nenhum colaborador encontrado com este nome.</div>
+                                                )}
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="bg-white rounded-xl shadow-lg print-content p-10">
                                             <div className="border-b-2 border-slate-900 pb-6 mb-6">
-                                                <div className="flex justify-between items-start mb-6"><div><h1 className="text-2xl font-black text-slate-900 mb-1">FICHA DE EPI</h1><p className="text-xs font-bold text-slate-400 tracking-widest uppercase">EPI MACBOOT - SEGURANÇA</p></div><div className="text-right"><p className="text-xs font-bold text-slate-900 uppercase">{CONSTANTES_EMPRESAS[selectedEmployeeForReport.company || 'MACBOOT'].razao}</p><p className="text-xs text-slate-500 font-mono">CNPJ: {CONSTANTES_EMPRESAS[selectedEmployeeForReport.company || 'MACBOOT'].cnpj}</p></div></div>
-                                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex justify-between items-center"><div><p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">COLABORADOR</p><p className="font-bold text-lg text-slate-800">{selectedEmployeeForReport.name}</p></div><div className="text-right"><p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">FUNÇÃO / SETOR</p><p className="text-sm font-bold text-slate-700 uppercase">{selectedEmployeeForReport.role} | {selectedEmployeeForReport.sector}</p></div></div>
+                                                <div className="flex justify-between items-start mb-6">
+                                                    <div>
+                                                        <h1 className="text-2xl font-black text-slate-900 mb-1">FICHA DE EPI</h1>
+                                                        <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">SEGURANÇA DO TRABALHO</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                         <p className="text-xs font-bold text-slate-900 uppercase">{CONSTANTES_EMPRESAS[selectedEmployeeForReport.company || 'MACBOOT']?.razao}</p>
+                                                         <p className="text-xs text-slate-500 font-mono">CNPJ: {CONSTANTES_EMPRESAS[selectedEmployeeForReport.company || 'MACBOOT']?.cnpj}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex justify-between items-center">
+                                                    <div>
+                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">COLABORADOR</p>
+                                                        <p className="font-bold text-lg text-slate-800">{selectedEmployeeForReport.name}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">FUNÇÃO / SETOR</p>
+                                                        <p className="text-sm font-bold text-slate-700 uppercase">{selectedEmployeeForReport.role} | {selectedEmployeeForReport.sector}</p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-[10px] text-justify text-slate-600 mb-8"><strong>TERMO:</strong> Declaro ter recebido os EPIs abaixo em perfeitas condições, comprometendo-me a usá-los para os fins a que se destinam e zelar pela sua guarda e comunicar qualquer alteração que os torne impróprios, conforme NR-06. A assinatura digital abaixo, acompanhada do hash de integridade, valida juridicamente este recebimento como uma Assinatura Eletrónica Avançada (Lei 14.063/2020).</div>
+                                            
+                                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-[10px] text-justify text-slate-600 mb-8"><strong>TERMO:</strong> Declaro ter recebido os EPIs abaixo em perfeitas condições, comprometendo-me a usá-los para os fins a que se destinam e zelar pela sua guarda e comunicar qualquer alteração que os torne impróprios, conforme NR-06. A assinatura digital abaixo valida juridicamente este recebimento.</div>
                                             <table className="w-full text-xs text-left">
                                                 <thead className="border-b-2 border-slate-800 font-bold uppercase"><tr><th className="py-2 w-20">Data</th><th>EPI</th><th className="w-20">CA</th><th className="text-center w-12">Qtd</th><th className="text-center w-48">Assinatura</th></tr></thead>
                                                 <tbody>
                                                     {deliveries.filter(d=>d.employeeId===selectedEmployeeForReport.id && d.status==='signed').map(d=>(
-                                                        <tr key={d.id} className="border-b border-slate-100"><td className="py-3">{d.createdAt?.toDate().toLocaleDateString('pt-PT')}</td><td>{d.epiName}</td><td>{d.epiCA}</td><td className="text-center">{d.quantityDelivered}</td><td className="text-center py-2"><img src={d.signature} className="h-16 w-32 object-contain mx-auto" /><div className="text-[8px] text-slate-400 font-mono mt-1">{d.digitalHash || 'LEGADO'}</div></td></tr>
+                                                        <tr key={d.id} className="border-b border-slate-100"><td className="py-3">{d.createdAt?.toDate().toLocaleDateString('pt-PT')}</td><td>{d.epiName}</td><td>{d.epiCA}</td><td className="text-center">{d.quantityDelivered}</td><td className="text-center py-2"><img src={d.signature} className="h-16 w-32 object-contain mx-auto" /></td></tr>
                                                     ))}
                                                 </tbody>
                                             </table>
-                                            <div className="mt-8 pt-4 border-t border-slate-200 text-[8px] text-slate-400 text-center font-mono">Documento gerado eletronicamente por EPI MACBOOT SYSTEM. Validade garantida por chave de integridade e metadados de auditoria.</div>
                                             <button onClick={()=>setSelectedEmployeeForReport(null)} className="mt-8 px-4 py-2 text-slate-500 font-bold text-xs bg-slate-100 rounded hover:bg-slate-200 no-print">Voltar</button>
                                             <button onClick={()=>window.print()} className="mt-8 ml-2 px-4 py-2 bg-brand-700 text-white font-bold text-xs rounded hover:bg-brand-800 no-print">Imprimir</button>
                                         </div>
                                     )}
                                 </div>
                             )}
+
                         </div>
                     </main>
 
@@ -791,9 +1047,9 @@
                     
                     <Modal isOpen={modals.backup} onClose={() => toggleModal('backup', false)} title="Backup e Migração">
                         <div className="space-y-6">
-                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800"><p className="font-bold mb-1">Instruções:</p><ol className="list-decimal list-inside space-y-1 ml-2"><li>Clique em "Baixar Backup" para salvar os dados atuais.</li><li>Se mudar de conta, use "Restaurar" na nova versão.</li></ol></div>
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800"><p className="font-bold mb-1">Instruções:</p><ol className="list-decimal list-inside space-y-1 ml-2"><li>Clique em "Baixar Backup" para salvar os dados atuais.</li><li>A versão SaaS carrega dados isolados por conta de e-mail.</li></ol></div>
                             <button onClick={exportData} className="w-full py-3 bg-slate-800 text-white rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-slate-900 transition-colors"><Icon name="DownloadCloud" size={20} /> Baixar Backup (.json)</button>
-                            <div className="relative border-t border-slate-200 pt-4"><p className="absolute top-1 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-slate-400 font-bold">RESTAURAR</p><label className="block w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-center text-slate-500 font-bold cursor-pointer hover:border-brand-500 hover:text-brand-600 transition-all"><input type="file" accept=".json" onChange={importData} className="hidden" /><span className="flex items-center justify-center gap-2"><Icon name="Upload" size={18}/> Selecionar Arquivo de Backup</span></label></div>
+                            <div className="relative border-t border-slate-200 pt-4"><p className="absolute top-1 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-slate-400 font-bold">RESTAURAR NO MEU COFRE</p><label className="block w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-center text-slate-500 font-bold cursor-pointer hover:border-brand-500 hover:text-brand-600 transition-all"><input type="file" accept=".json" onChange={importData} className="hidden" /><span className="flex items-center justify-center gap-2"><Icon name="Upload" size={18}/> Selecionar Arquivo de Backup</span></label></div>
                         </div>
                     </Modal>
 
