@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EPI MACBOOT - Gestão Profissional</title>
+    <title>EPI  - Gestão Profissional</title>
     
     <!-- PWA Config -->
     <meta name="theme-color" content="#0f172a">
@@ -84,21 +84,6 @@
         // ==========================================
         // CONFIGURAÇÃO FIREBASE
         // ==========================================
-        const CONSTANTES_EMPRESAS = {
-            'MACBOOT': {
-                razao: 'MACBOOT INDUSTRIA E COMERCIO DE CALÇADOS LTDA',
-                cnpj: '68.403.583/0001-35',
-                cor: 'bg-slate-800',
-                texto: 'text-white'
-            },
-            'PESPONTO': {
-                razao: 'MACBOOT INDUSTRIA E COMERCIO DE CALÇADOS LTDA',
-                cnpj: '68.403.583/0002-16',
-                cor: 'bg-blue-600',
-                texto: 'text-white'
-            }
-        };
-
         const firebaseConfig = {
             apiKey: "AIzaSyAAV6tC_dn8CBrw6g74gzAtYweiwq_9hPw",
             authDomain: "epimac.firebaseapp.com",
@@ -148,7 +133,8 @@
             BarChart: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
             Database: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
             DownloadCloud: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>,
-            Filter: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filter: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+            Building: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg>
         };
         const Icon = ({ name, size = 20, className }) => { const Ico = Icons[name]; return Ico ? <Ico width={size} height={size} className={className} /> : null; };
 
@@ -329,17 +315,17 @@
                     <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
                         <div className="text-center mb-8">
                             <div className="w-16 h-16 bg-brand-700 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg"><Icon name="ShieldCheck" size={40} /></div>
-                            <h2 className="text-2xl font-bold text-slate-800">SISTEMA EPI</h2><p className="text-slate-500 text-sm mt-1">Acesso Restrito</p>
+                            <h2 className="text-2xl font-bold text-slate-800">SISTEMA EPI</h2><p className="text-slate-500 text-sm mt-1">Acesso Restrito SaaS</p>
                         </div>
                         <form onSubmit={handleLogin} className="space-y-4">
-                            <div><label className="text-xs font-bold text-slate-600 uppercase">Email do Cliente</label><input type="email" required className="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500" value={email} onChange={e=>setEmail(e.target.value)} /></div>
+                            <div><label className="text-xs font-bold text-slate-600 uppercase">Email da Conta</label><input type="email" required className="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500" value={email} onChange={e=>setEmail(e.target.value)} /></div>
                             <div><label className="text-xs font-bold text-slate-600 uppercase">Senha</label><input type="password" required className="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500" value={pass} onChange={e=>setPass(e.target.value)} /></div>
                             <div className="flex items-center gap-2">
                                 <input type="checkbox" id="remember" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="rounded border-gray-300 text-brand-700 focus:ring-brand-500"/>
                                 <label htmlFor="remember" className="text-sm text-slate-600">Manter-me conectado</label>
                             </div>
                             {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center">{error}</div>}
-                            <button type="submit" disabled={loading} className="w-full py-3 bg-brand-700 text-white rounded-lg font-bold shadow-md flex justify-center items-center gap-2">{loading ? '...' : <><Icon name="LogIn" size={18}/> Entrar</>}</button>
+                            <button type="submit" disabled={loading} className="w-full py-3 bg-brand-700 text-white rounded-lg font-bold shadow-md flex justify-center items-center gap-2">{loading ? '...' : <><Icon name="LogIn" size={18}/> Entrar no Cofre</>}</button>
                         </form>
                     </div>
                 </div>
@@ -350,6 +336,7 @@
         function App() {
             const [user, setUser] = useState(null);
             const [view, setView] = useState('dashboard');
+            const [companies, setCompanies] = useState([]);
             const [employees, setEmployees] = useState([]);
             const [inventory, setInventory] = useState([]);
             const [deliveries, setDeliveries] = useState([]);
@@ -360,15 +347,16 @@
             const [employeeCompanyFilter, setEmployeeCompanyFilter] = useState('TODOS');
 
             // Modais
-            const [modals, setModals] = useState({ import: false, addEmp: false, addInv: false, addStock: false, delivery: false, sign: false, backup: false });
+            const [modals, setModals] = useState({ import: false, addCompany: false, addEmp: false, addInv: false, addStock: false, delivery: false, sign: false, backup: false });
             
-            // Dados
+            // Dados Form
             const [importType, setImportType] = useState(null);
             const [importText, setImportText] = useState('');
-            const [newEmployee, setNewEmployee] = useState({ name: '', role: '', sector: '', company: 'MACBOOT' });
+            const [newCompany, setNewCompany] = useState({ alias: '', razao: '', cnpj: '' });
+            const [newEmployee, setNewEmployee] = useState({ name: '', role: '', sector: '', companyId: '' });
             const [newInventory, setNewInventory] = useState({ name: '', complement: '', ca: '', quantity: 0 });
             const [stockToAdd, setStockToAdd] = useState({ id: '', current: 0, add: '' });
-            const [importCompany, setImportCompany] = useState('MACBOOT');
+            const [importCompany, setImportCompany] = useState('');
             
             const [deliveryEmployeeId, setDeliveryEmployeeId] = useState('');
             const [currentEpiSelection, setCurrentEpiSelection] = useState({ id: '', qty: 1 });
@@ -376,9 +364,8 @@
             const [pendingDeliveryToSign, setPendingDeliveryToSign] = useState(null);
             const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState(null);
 
-            // --- NOVO: FUNÇÃO PARA ISOLAR DADOS POR UTILIZADOR (MULTI-TENANT SaaS) ---
+            // --- FUNÇÃO PARA ISOLAR DADOS POR UTILIZADOR (MULTI-TENANT SaaS) ---
             const getRef = (collectionName) => {
-                // Em vez de usar a pasta public, usa a pasta correspondente ao UID de quem fez login
                 return db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection(collectionName);
             };
 
@@ -435,16 +422,22 @@
                 if(!user || !db) return;
                 const err = (e) => { console.error(e); if(e.code === 'permission-denied') setPermissionError(true); };
                 
-                // Usando a nova função getRef para ler apenas os dados do utilizador logado
                 const un1 = getRef('employees').onSnapshot(s => setEmployees(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
                 const un2 = getRef('inventory').onSnapshot(s => setInventory(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
                 const un3 = getRef('deliveries').orderBy('createdAt', 'desc').onSnapshot(s => setDeliveries(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
+                const un4 = getRef('companies').onSnapshot(s => setCompanies(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
                 
-                return () => { un1(); un2(); un3(); };
+                return () => { un1(); un2(); un3(); un4(); };
             }, [user]);
 
             // Funções
             const toggleModal = (name, val) => setModals(prev => ({...prev, [name]: val}));
+
+            // Helpers para Empresa Dinâmica
+            const getCompanyAlias = (emp) => {
+                const comp = companies.find(c => c.id === emp.companyId || c.alias === emp.company);
+                return comp ? comp.alias : 'N/D';
+            };
 
             // --- RESTAURAR (MIGRAÇÃO) PARA A CONTA PRIVADA ---
             const importData = (e) => {
@@ -460,10 +453,16 @@
                         const BATCH_SIZE = 400;
                         let ops = [];
 
+                        if(json.companies) {
+                            json.companies.forEach(comp => {
+                                const ref = getRef('companies').doc(comp.id || getRef('companies').doc().id);
+                                ops.push({ type: 'set', ref, data: { ...comp, createdAt: new Date() } });
+                            });
+                        }
                         if(json.employees) {
                             json.employees.forEach(emp => {
                                 const ref = getRef('employees').doc(emp.id || getRef('employees').doc().id);
-                                ops.push({ type: 'set', ref, data: { ...emp, company: emp.company || 'MACBOOT', createdAt: new Date() } });
+                                ops.push({ type: 'set', ref, data: { ...emp, createdAt: new Date() } });
                             });
                         }
                         if(json.inventory) {
@@ -500,6 +499,7 @@
 
             const exportData = () => {
                 const data = {
+                    companies,
                     employees,
                     inventory,
                     deliveries: deliveries.map(d => ({
@@ -544,7 +544,7 @@
                                     name: row[0], 
                                     role: row[1], 
                                     sector: row[2], 
-                                    company: importCompany, 
+                                    companyId: importCompany, 
                                     createdAt: new Date() 
                                 });
                                 added++;
@@ -575,10 +575,20 @@
                 catch(e) { if(e.code==='permission-denied') setPermissionError(true); else alert(e.message); }
             };
 
+            const handleAddCompany = async () => {
+                if(!newCompany.alias || !newCompany.razao || !newCompany.cnpj) return alert("Preencha todos os campos.");
+                try {
+                    await getRef('companies').add({...newCompany, createdAt: new Date()});
+                    toggleModal('addCompany', false);
+                    setNewCompany({ alias: '', razao: '', cnpj: '' });
+                } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
+            };
+
             const handleAddEmployee = async () => {
+                if(!newEmployee.companyId) return alert("Selecione a Empresa.");
                 try {
                     await getRef('employees').add({...newEmployee, createdAt: new Date()});
-                    toggleModal('addEmp', false); setNewEmployee({name:'', role:'', sector:'', company: 'MACBOOT'});
+                    toggleModal('addEmp', false); setNewEmployee({name:'', role:'', sector:'', companyId: ''});
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
@@ -623,7 +633,7 @@
                             employeeName: emp.name, 
                             employeeRole: emp.role, 
                             employeeSector: emp.sector,
-                            employeeCompany: emp.company || 'MACBOOT',
+                            employeeCompanyId: emp.companyId || null,
                             epiId: item.id, 
                             epiName: item.name, 
                             epiCA: item.ca, 
@@ -678,7 +688,8 @@
             const filteredEmployees = employees.filter(e => {
                 const searchLower = employeeSearch.toLowerCase();
                 const matchesSearch = e.name.toLowerCase().includes(searchLower) || e.role.toLowerCase().includes(searchLower);
-                const matchesCompany = employeeCompanyFilter === 'TODOS' || (e.company || 'MACBOOT') === employeeCompanyFilter;
+                // Backward compatibility for old records with string 'company'
+                const matchesCompany = employeeCompanyFilter === 'TODOS' || e.companyId === employeeCompanyFilter || e.company === employeeCompanyFilter;
                 return matchesSearch && matchesCompany;
             });
 
@@ -688,7 +699,7 @@
                 const groups = {};
                 
                 pending.forEach(d => {
-                    const key = d.batchId || d.id; // Usa batchId se existir, senão ID único
+                    const key = d.batchId || d.id;
                     if (!groups[key]) {
                         groups[key] = {
                             ...d,
@@ -711,12 +722,14 @@
                     
                     {/* SIDEBAR */}
                     <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-                        <div className="h-16 flex items-center px-6 border-b border-slate-100 font-bold text-brand-900 gap-2"><Icon name="ShieldCheck" size={24}/> EPI SYSTEM</div>
+                        <div className="h-16 flex items-center px-6 border-b border-slate-100 font-bold text-brand-900 gap-2"><Icon name="ShieldCheck" size={24}/> EPI SYSTEM SaaS</div>
                         <nav className="p-4 space-y-1">
                             <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-2">Gestão</p>
                             <SidebarItem icon="ClipboardCheck" label="Visão Geral" id="dashboard" />
+                            <SidebarItem icon="Building" label="Minhas Empresas" id="companies" />
                             <SidebarItem icon="UserPlus" label="Colaboradores" id="employees" />
                             <SidebarItem icon="Package" label="Estoque de EPIs" id="inventory" />
+                            
                             <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-6">Operacional</p>
                             <button onClick={()=>toggleModal('delivery', true)} className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-brand-700 bg-brand-50 rounded-lg hover:bg-brand-100 border border-brand-100 transition-all mb-1"><Icon name="Plus" size={18} /> Nova Entrega</button>
                             <SidebarItem icon="Clock" label="Assinaturas" id="pending-signatures" count={deliveries.filter(d=>d.status==='pending').length} />
@@ -814,6 +827,32 @@
                                 </div>
                             )}
 
+                            {/* GESTÃO DE EMPRESAS/FILIAIS */}
+                            {view === 'companies' && (
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                                    <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <h3 className="font-bold text-slate-800">Minhas Empresas / Filiais</h3>
+                                        <button onClick={()=>toggleModal('addCompany', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Cadastrar Empresa</button>
+                                    </div>
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Nome Fantasia (Apelido)</th><th className="px-6 py-4">Razão Social</th><th className="px-6 py-4">CNPJ</th><th className="px-6 py-4 text-right">Ações</th></tr></thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {companies.map(c=>(
+                                                <tr key={c.id} className="hover:bg-slate-50">
+                                                    <td className="px-6 py-4 font-bold text-slate-700">{c.alias}</td>
+                                                    <td className="px-6 py-4 text-slate-600">{c.razao}</td>
+                                                    <td className="px-6 py-4 font-mono text-slate-500">{c.cnpj}</td>
+                                                    <td className="px-6 py-4 text-right"><button onClick={()=>handleDelete('companies', c.id)} className="text-red-400 hover:text-red-600"><Icon name="Trash2"/></button></td>
+                                                </tr>
+                                            ))}
+                                            {companies.length === 0 && (
+                                                <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-400 italic">Nenhuma empresa cadastrada. Adicione sua matriz e filiais aqui.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
                             {view === 'employees' && (
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                                     <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -846,8 +885,7 @@
                                                     onChange={e => setEmployeeCompanyFilter(e.target.value)}
                                                 >
                                                     <option value="TODOS">Todas Empresas</option>
-                                                    <option value="MACBOOT">MACBOOT</option>
-                                                    <option value="PESPONTO">PESPONTO</option>
+                                                    {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
                                                 </select>
                                                 <div className="absolute left-3 top-2.5 text-slate-400 pointer-events-none">
                                                     <Icon name="Filter" size={16} />
@@ -862,7 +900,7 @@
                                             {filteredEmployees.map(e=>(
                                                 <tr key={e.id} className="hover:bg-slate-50">
                                                     <td className="px-6 py-4 font-medium">{e.name}</td>
-                                                    <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[10px] font-bold ${CONSTANTES_EMPRESAS[e.company||'MACBOOT']?.cor || 'bg-slate-800'} ${CONSTANTES_EMPRESAS[e.company||'MACBOOT']?.texto || 'text-white'}`}>{e.company || 'MACBOOT'}</span></td>
+                                                    <td className="px-6 py-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">{getCompanyAlias(e)}</span></td>
                                                     <td className="px-6 py-4 text-slate-500">{e.role}</td>
                                                     <td className="px-6 py-4 text-right"><button onClick={()=>handleDelete('employees', e.id)} className="text-red-400 hover:text-red-600"><Icon name="Trash2"/></button></td>
                                                 </tr>
@@ -923,7 +961,7 @@
                                                     .filter(e => e.name.toLowerCase().includes(reportSearch.toLowerCase()) || e.role.toLowerCase().includes(reportSearch.toLowerCase()))
                                                     .map(e=>(
                                                         <button key={e.id} onClick={()=>setSelectedEmployeeForReport(e)} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all relative overflow-hidden group">
-                                                            <div className={`absolute top-0 right-0 p-1.5 rounded-bl-lg text-[10px] font-bold text-white ${CONSTANTES_EMPRESAS[e.company||'MACBOOT']?.cor || 'bg-slate-800'}`}>{e.company || 'MAC'}</div>
+                                                            <div className="absolute top-0 right-0 p-1.5 rounded-bl-lg text-[10px] font-bold text-slate-500 bg-slate-100">{getCompanyAlias(e)}</div>
                                                             <p className="font-bold text-slate-800">{e.name}</p>
                                                             <p className="text-xs text-slate-500 uppercase">{e.role}</p>
                                                         </button>
@@ -935,42 +973,48 @@
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="bg-white rounded-xl shadow-lg print-content p-10">
-                                            <div className="border-b-2 border-slate-900 pb-6 mb-6">
-                                                <div className="flex justify-between items-start mb-6">
-                                                    <div>
-                                                        <h1 className="text-2xl font-black text-slate-900 mb-1">FICHA DE EPI</h1>
-                                                        <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">SEGURANÇA DO TRABALHO</p>
+                                        (() => {
+                                            // Encontrar dados da empresa dinamicamente
+                                            const empComp = companies.find(c => c.id === selectedEmployeeForReport.companyId || c.alias === selectedEmployeeForReport.company) || {};
+                                            return (
+                                                <div className="bg-white rounded-xl shadow-lg print-content p-10">
+                                                    <div className="border-b-2 border-slate-900 pb-6 mb-6">
+                                                        <div className="flex justify-between items-start mb-6">
+                                                            <div>
+                                                                <h1 className="text-2xl font-black text-slate-900 mb-1">FICHA DE EPI</h1>
+                                                                <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">SEGURANÇA DO TRABALHO</p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-xs font-bold text-slate-900 uppercase">{empComp.razao || 'RAZÃO SOCIAL NÃO CADASTRADA'}</p>
+                                                                <p className="text-xs text-slate-500 font-mono">CNPJ: {empComp.cnpj || '00.000.000/0000-00'}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex justify-between items-center">
+                                                            <div>
+                                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">COLABORADOR</p>
+                                                                <p className="font-bold text-lg text-slate-800">{selectedEmployeeForReport.name}</p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">FUNÇÃO / SETOR</p>
+                                                                <p className="text-sm font-bold text-slate-700 uppercase">{selectedEmployeeForReport.role} | {selectedEmployeeForReport.sector}</p>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                         <p className="text-xs font-bold text-slate-900 uppercase">{CONSTANTES_EMPRESAS[selectedEmployeeForReport.company || 'MACBOOT']?.razao}</p>
-                                                         <p className="text-xs text-slate-500 font-mono">CNPJ: {CONSTANTES_EMPRESAS[selectedEmployeeForReport.company || 'MACBOOT']?.cnpj}</p>
-                                                    </div>
+                                                    
+                                                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-[10px] text-justify text-slate-600 mb-8"><strong>TERMO:</strong> Declaro ter recebido os EPIs abaixo em perfeitas condições, comprometendo-me a usá-los para os fins a que se destinam e zelar pela sua guarda e comunicar qualquer alteração que os torne impróprios, conforme NR-06. A assinatura digital abaixo valida juridicamente este recebimento.</div>
+                                                    <table className="w-full text-xs text-left">
+                                                        <thead className="border-b-2 border-slate-800 font-bold uppercase"><tr><th className="py-2 w-20">Data</th><th>EPI</th><th className="w-20">CA</th><th className="text-center w-12">Qtd</th><th className="text-center w-48">Assinatura</th></tr></thead>
+                                                        <tbody>
+                                                            {deliveries.filter(d=>d.employeeId===selectedEmployeeForReport.id && d.status==='signed').map(d=>(
+                                                                <tr key={d.id} className="border-b border-slate-100"><td className="py-3">{d.createdAt?.toDate().toLocaleDateString('pt-PT')}</td><td>{d.epiName}</td><td>{d.epiCA}</td><td className="text-center">{d.quantityDelivered}</td><td className="text-center py-2"><img src={d.signature} className="h-16 w-32 object-contain mx-auto" /></td></tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                    <button onClick={()=>setSelectedEmployeeForReport(null)} className="mt-8 px-4 py-2 text-slate-500 font-bold text-xs bg-slate-100 rounded hover:bg-slate-200 no-print">Voltar</button>
+                                                    <button onClick={()=>window.print()} className="mt-8 ml-2 px-4 py-2 bg-brand-700 text-white font-bold text-xs rounded hover:bg-brand-800 no-print">Imprimir</button>
                                                 </div>
-                                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex justify-between items-center">
-                                                    <div>
-                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">COLABORADOR</p>
-                                                        <p className="font-bold text-lg text-slate-800">{selectedEmployeeForReport.name}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">FUNÇÃO / SETOR</p>
-                                                        <p className="text-sm font-bold text-slate-700 uppercase">{selectedEmployeeForReport.role} | {selectedEmployeeForReport.sector}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-[10px] text-justify text-slate-600 mb-8"><strong>TERMO:</strong> Declaro ter recebido os EPIs abaixo em perfeitas condições, comprometendo-me a usá-los para os fins a que se destinam e zelar pela sua guarda e comunicar qualquer alteração que os torne impróprios, conforme NR-06. A assinatura digital abaixo valida juridicamente este recebimento.</div>
-                                            <table className="w-full text-xs text-left">
-                                                <thead className="border-b-2 border-slate-800 font-bold uppercase"><tr><th className="py-2 w-20">Data</th><th>EPI</th><th className="w-20">CA</th><th className="text-center w-12">Qtd</th><th className="text-center w-48">Assinatura</th></tr></thead>
-                                                <tbody>
-                                                    {deliveries.filter(d=>d.employeeId===selectedEmployeeForReport.id && d.status==='signed').map(d=>(
-                                                        <tr key={d.id} className="border-b border-slate-100"><td className="py-3">{d.createdAt?.toDate().toLocaleDateString('pt-PT')}</td><td>{d.epiName}</td><td>{d.epiCA}</td><td className="text-center">{d.quantityDelivered}</td><td className="text-center py-2"><img src={d.signature} className="h-16 w-32 object-contain mx-auto" /></td></tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                            <button onClick={()=>setSelectedEmployeeForReport(null)} className="mt-8 px-4 py-2 text-slate-500 font-bold text-xs bg-slate-100 rounded hover:bg-slate-200 no-print">Voltar</button>
-                                            <button onClick={()=>window.print()} className="mt-8 ml-2 px-4 py-2 bg-brand-700 text-white font-bold text-xs rounded hover:bg-brand-800 no-print">Imprimir</button>
-                                        </div>
+                                            );
+                                        })()
                                     )}
                                 </div>
                             )}
@@ -979,13 +1023,28 @@
                     </main>
 
                     {/* MODAIS */}
+                    <Modal isOpen={modals.addCompany} onClose={()=>toggleModal('addCompany', false)} title="Cadastrar Nova Empresa">
+                        <div className="space-y-4">
+                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome Fantasia / Apelido (ex: Matriz)" value={newCompany.alias} onChange={e=>setNewCompany({...newCompany, alias:e.target.value})} />
+                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Razão Social Completa" value={newCompany.razao} onChange={e=>setNewCompany({...newCompany, razao:e.target.value})} />
+                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 font-mono" placeholder="CNPJ (00.000.000/0000-00)" value={newCompany.cnpj} onChange={e=>setNewCompany({...newCompany, cnpj:e.target.value})} />
+                            <button onClick={handleAddCompany} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900">Salvar Empresa</button>
+                        </div>
+                    </Modal>
+
                     <Modal isOpen={modals.addEmp} onClose={()=>toggleModal('addEmp', false)} title="Novo Colaborador">
                         <div className="space-y-4">
-                            <div><label className="text-xs font-bold text-slate-500 uppercase">Empresa</label><select className="w-full p-3 border rounded-lg outline-none bg-white" value={newEmployee.company} onChange={e=>setNewEmployee({...newEmployee, company:e.target.value})}><option value="MACBOOT">MACBOOT</option><option value="PESPONTO">PESPONTO</option></select></div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase">Vincular a qual Empresa?</label>
+                                <select className="w-full p-3 border rounded-lg outline-none bg-white mt-1" value={newEmployee.companyId} onChange={e=>setNewEmployee({...newEmployee, companyId:e.target.value})}>
+                                    <option value="">Selecione a empresa...</option>
+                                    {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
+                                </select>
+                            </div>
                             <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome Completo" value={newEmployee.name} onChange={e=>setNewEmployee({...newEmployee, name:e.target.value})} />
                             <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Função" value={newEmployee.role} onChange={e=>setNewEmployee({...newEmployee, role:e.target.value})} />
                             <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Setor" value={newEmployee.sector} onChange={e=>setNewEmployee({...newEmployee, sector:e.target.value})} />
-                            <button onClick={handleAddEmployee} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900">Salvar</button>
+                            <button onClick={handleAddEmployee} disabled={!newEmployee.companyId} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900 disabled:opacity-50">Salvar</button>
                         </div>
                     </Modal>
 
@@ -1032,7 +1091,15 @@
                     {modals.import && (
                         <Modal isOpen={true} onClose={() => { toggleModal('import', false); setImportText(''); }} title={`Importar ${importType === 'employees' ? 'Colaboradores' : 'Estoque'}`}>
                             <div className="space-y-4">
-                                {importType === 'employees' && <div className="mb-2"><label className="text-xs font-bold text-slate-500 uppercase">Empresa Destino</label><select className="w-full p-3 border rounded-lg bg-white mt-1" value={importCompany} onChange={e=>setImportCompany(e.target.value)}><option value="MACBOOT">MACBOOT</option><option value="PESPONTO">PESPONTO</option></select></div>}
+                                {importType === 'employees' && (
+                                    <div className="mb-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Empresa Destino</label>
+                                        <select className="w-full p-3 border rounded-lg bg-white mt-1 outline-none focus:border-brand-500" value={importCompany} onChange={e=>setImportCompany(e.target.value)}>
+                                            <option value="">Selecione...</option>
+                                            {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
+                                        </select>
+                                    </div>
+                                )}
                                 <p className="text-sm text-slate-500 bg-slate-50 p-3 rounded border border-slate-100">
                                     Anexe um ficheiro Excel (.xlsx) ou CSV. <br/>
                                     <strong>Ordem das colunas:</strong> {importType === 'employees' ? 'Nome, Função, Setor' : 'Nome, Complemento, CA, Quantidade'}
@@ -1040,7 +1107,7 @@
                                 <input type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleFileUpload} className="w-full p-2 border border-slate-200 rounded text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
                                 <div className="text-center text-xs text-slate-400 my-2">- OU -</div>
                                 <textarea className="w-full h-32 p-4 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Colar dados manualmente..." value={importText} onChange={e => setImportText(e.target.value)} />
-                                {importText && <button onClick={handleImport} className="w-full py-3 bg-brand-700 text-white rounded-lg font-bold text-sm hover:bg-brand-900 transition-colors">Importar Texto</button>}
+                                {importText && <button onClick={handleImport} disabled={importType === 'employees' && !importCompany} className="w-full py-3 bg-brand-700 text-white rounded-lg font-bold text-sm hover:bg-brand-900 transition-colors disabled:opacity-50">Importar Texto</button>}
                             </div>
                         </Modal>
                     )}
@@ -1064,4 +1131,3 @@
     </script>
 </body>
 </html>
-
