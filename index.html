@@ -165,7 +165,7 @@
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden p-8 text-center space-y-6">
                         <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto"><Icon name="AlertTriangle" size={32} /></div>
-                        <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações.</p></div>
+                        <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações ou o acesso à base de dados foi recusado pelas regras.</p></div>
                         <button onClick={onClose} className="w-full py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors uppercase text-sm">Entendi</button>
                     </div>
                 </div>
@@ -301,11 +301,18 @@
                         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                         const data = imgData.data;
                         for(let i = 0; i < data.length; i += 4) {
-                            const r = data[i], g = data[i+1], b = data[i+2];
+                            const r = data[i];
+                            const g = data[i+1];
+                            const b = data[i+2];
+                            
+                            // Se o pixel for claro (papel branco/cinza)
                             if(r > 150 && g > 150 && b > 150) {
                                 data[i+3] = 0; // Torna transparente
                             } else {
-                                data[i] = 0; data[i+1] = 0; data[i+2] = 0; // Escurece
+                                // Escurece os traços da caneta
+                                data[i] = 0; 
+                                data[i+1] = 0; 
+                                data[i+2] = 0;
                             }
                         }
                         ctx.putImageData(imgData, 0, 0);
@@ -318,6 +325,7 @@
             return (
                 <div className="flex flex-col h-full bg-slate-100">
                     <div className="flex-1 m-4 bg-white rounded-xl shadow-inner border border-slate-300 relative overflow-hidden">
+                        {/* Canvas com touch-action none para evitar scroll no mobile */}
                         <canvas 
                             ref={canvasRef}
                             className="block w-full h-full cursor-crosshair touch-none"
@@ -380,7 +388,7 @@
 
         // --- APP PRINCIPAL ---
         function App() {
-            // Conta de Administrador
+            // Conta de Administrador Central
             const SUPER_ADMIN_EMAIL = 'gabriel.sousasst@outlook.com';
 
             // --- ESTADOS DO SISTEMA E AUTENTICAÇÃO ---
@@ -427,26 +435,9 @@
 
             const isSuperAdmin = user && user.email === SUPER_ADMIN_EMAIL;
 
-            // --- FUNÇÃO DE BASE DE DADOS (APONTA PARA A RAIZ PARTILHADA) ---
+            // --- FUNÇÃO DE BASE DE DADOS PARA CADA UTILIZADOR (SAAS ISOLADO) ---
             const getRef = (collectionName) => {
-                return db.collection('artifacts').doc(appId).collection(collectionName);
-            };
-
-            // Funções robustas para ler empresas (mesmo as antigas)
-            const getCompanyDetails = (identifier) => {
-                if (!identifier) return { alias: 'N/D', razao: 'Não Cadastrada', cnpj: '' };
-                const comp = companies.find(c => c.id === identifier || c.alias === identifier);
-                if (comp) return comp;
-                // Fallback para os dados antigos
-                const legacyComp = CONSTANTES_EMPRESAS[identifier];
-                if (legacyComp) return { alias: identifier, razao: legacyComp.razao, cnpj: legacyComp.cnpj };
-                return { alias: identifier, razao: 'Não Cadastrada', cnpj: '' };
-            };
-
-            const getCompanyAlias = (emp) => {
-                if (!emp) return 'N/D';
-                const identifier = emp.companyId || emp.company || 'MACBOOT';
-                return getCompanyDetails(identifier).alias;
+                return db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection(collectionName);
             };
 
             // Métrica do Dashboard
@@ -536,12 +527,12 @@
 
                 // Admin carrega todas as permissões. User normal procura apenas a dele para ver se tem botão de foto.
                 if (isSuperAdmin) {
-                    unPerms = getRef('permissions').onSnapshot(snap => {
+                    unPerms = db.collection('artifacts').doc(appId).collection('permissions').onSnapshot(snap => {
                         setAdminUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
                         setPermissions({ canImportSignature: true });
                     }, err);
                 } else {
-                    unPerms = getRef('permissions').where('email', '==', user.email).onSnapshot(snap => {
+                    unPerms = db.collection('artifacts').doc(appId).collection('permissions').where('email', '==', user.email).onSnapshot(snap => {
                         if (!snap.empty) {
                             const myPerm = snap.docs[0].data();
                             setPermissions({ canImportSignature: myPerm.canImportSignature || false });
@@ -550,7 +541,7 @@
                     }, () => {}); // Ignora silenciosamente se o firebase bloquear a leitura aqui
                 }
 
-                // Carregar dados de EPI apenas se não for o Admin
+                // Carregar dados de EPI isolados apenas se não for o Admin
                 if (!isSuperAdmin) {
                     un1 = getRef('employees').onSnapshot(s => setEmployees(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
                     un2 = getRef('inventory').onSnapshot(s => setInventory(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
@@ -564,7 +555,7 @@
             // Atualiza quantidade de funcionários na tabela de permissões para o Admin ver
             useEffect(() => {
                 if (!isSuperAdmin && user && myPermId && employees.length >= 0) {
-                    getRef('permissions').doc(myPermId).update({
+                    db.collection('artifacts').doc(appId).collection('permissions').doc(myPermId).update({
                         employeeCount: employees.length
                     }).catch(() => {}); // Ignora silenciosamente erros de permissão ao atualizar contagem
                 }
@@ -574,7 +565,7 @@
             const handleAddAdminUser = async () => {
                 if (!newAdmin.email) return alert("Preencha o e-mail.");
                 try {
-                    await getRef('permissions').add({
+                    await db.collection('artifacts').doc(appId).collection('permissions').add({
                         email: newAdmin.email.toLowerCase().trim(),
                         canImportSignature: newAdmin.canImportSignature,
                         employeeCount: 0
@@ -585,17 +576,33 @@
 
             const handleDeleteAdminUser = async (id) => {
                 if(!confirm("Remover o acesso deste utilizador?")) return;
-                try { await getRef('permissions').doc(id).delete(); } 
+                try { await db.collection('artifacts').doc(appId).collection('permissions').doc(id).delete(); } 
                 catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
             const togglePermission = async (id, currentVal) => {
-                try { await getRef('permissions').doc(id).update({ canImportSignature: !currentVal }); }
+                try { await db.collection('artifacts').doc(appId).collection('permissions').doc(id).update({ canImportSignature: !currentVal }); }
                 catch(e) { console.error(e); }
             };
 
             // --- FUNÇÕES ORIGINAIS DO SISTEMA ---
             const toggleModal = (name, val) => setModals(prev => ({...prev, [name]: val}));
+
+            const getCompanyDetails = (identifier) => {
+                if (!identifier) return { alias: 'N/D', razao: 'Não Cadastrada', cnpj: '' };
+                const comp = companies.find(c => c.id === identifier || c.alias === identifier);
+                if (comp) return comp;
+                // Fallback para os dados antigos
+                const legacyComp = CONSTANTES_EMPRESAS[identifier];
+                if (legacyComp) return { alias: identifier, razao: legacyComp.razao, cnpj: legacyComp.cnpj };
+                return { alias: identifier, razao: 'Não Cadastrada', cnpj: '' };
+            };
+
+            const getCompanyAlias = (emp) => {
+                if (!emp) return 'N/D';
+                const identifier = emp.companyId || emp.company || 'MACBOOT';
+                return getCompanyDetails(identifier).alias;
+            };
 
             const importData = (e) => {
                 const file = e.target.files[0];
@@ -944,42 +951,80 @@
 
                             {view === 'dashboard' && !isSuperAdmin && (
                                 <div className="space-y-6">
+                                    {/* CARTÕES SUPERIORES (TOTAL GERAL) */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><p className="text-sm text-slate-500 font-bold">COLABORADORES</p><p className="text-3xl font-bold mt-2 text-slate-800">{employees.length}</p></div>
                                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><p className="text-sm text-slate-500 font-bold">ITENS EM ESTOQUE</p><p className="text-3xl font-bold mt-2 text-slate-800">{inventory.length}</p></div>
                                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><p className="text-sm text-slate-500 font-bold">ENTREGAS TOTAIS</p><p className="text-3xl font-bold mt-2 text-slate-800">{deliveries.filter(d=>d.status==='signed').length}</p></div>
                                     </div>
+
+                                    {/* CONSUMO E SAÍDAS */}
                                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                                         <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-wide text-sm"><Icon name="BarChart" size={18}/> Previsão de Consumo de EPIs</h3>
+                                        
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 flex flex-col items-center"><span className="text-blue-600 font-bold text-xs uppercase">Hoje</span><span className="text-2xl font-black text-blue-900 mt-1">{dashboardMetrics.today}</span></div>
-                                            <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex flex-col items-center"><span className="text-indigo-600 font-bold text-xs uppercase">Esta Semana</span><span className="text-2xl font-black text-indigo-900 mt-1">{dashboardMetrics.week}</span></div>
-                                            <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 flex flex-col items-center"><span className="text-purple-600 font-bold text-xs uppercase">Este Mês</span><span className="text-2xl font-black text-purple-900 mt-1">{dashboardMetrics.month}</span></div>
+                                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 flex flex-col items-center">
+                                                <span className="text-blue-600 font-bold text-xs uppercase">Hoje</span>
+                                                <span className="text-2xl font-black text-blue-900 mt-1">{dashboardMetrics.today}</span>
+                                                <span className="text-[10px] text-blue-400">unidades</span>
+                                            </div>
+                                            <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex flex-col items-center">
+                                                <span className="text-indigo-600 font-bold text-xs uppercase">Esta Semana</span>
+                                                <span className="text-2xl font-black text-indigo-900 mt-1">{dashboardMetrics.week}</span>
+                                                <span className="text-[10px] text-indigo-400">unidades</span>
+                                            </div>
+                                            <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 flex flex-col items-center">
+                                                <span className="text-purple-600 font-bold text-xs uppercase">Este Mês</span>
+                                                <span className="text-2xl font-black text-purple-900 mt-1">{dashboardMetrics.month}</span>
+                                                <span className="text-[10px] text-purple-400">unidades</span>
+                                            </div>
                                         </div>
+
                                         <div>
                                             <h4 className="text-xs font-bold text-slate-500 uppercase mb-3 border-b pb-2">Detalhamento por Item (Fluxo de Saída)</h4>
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-sm text-left">
-                                                    <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="py-3 px-3 rounded-l-lg">EPI</th><th className="py-3 px-3">C.A.</th><th className="py-3 px-3 text-center text-blue-600">Dia</th><th className="py-3 px-3 text-center text-indigo-600">Semana</th><th className="py-3 px-3 text-center text-purple-600 rounded-r-lg">Mês</th></tr></thead>
+                                                    <thead className="bg-slate-50 text-slate-500 font-medium">
+                                                        <tr>
+                                                            <th className="py-3 px-3 rounded-l-lg">EPI</th>
+                                                            <th className="py-3 px-3">C.A.</th>
+                                                            <th className="py-3 px-3 text-center text-blue-600">Dia</th>
+                                                            <th className="py-3 px-3 text-center text-indigo-600">Semana</th>
+                                                            <th className="py-3 px-3 text-center text-purple-600 rounded-r-lg">Mês</th>
+                                                        </tr>
+                                                    </thead>
                                                     <tbody className="divide-y divide-slate-100">
                                                         {dashboardMetrics.fullReport.length > 0 ? dashboardMetrics.fullReport.map((item, idx) => (
-                                                            <tr key={idx} className="hover:bg-slate-50 transition-colors"><td className="py-3 px-3 font-bold text-slate-700">{item.name}</td><td className="py-3 px-3 text-xs text-slate-500 font-mono">{item.ca}</td><td className="py-3 px-3 text-center font-bold text-blue-900 bg-blue-50/50">{item.today > 0 ? item.today : '-'}</td><td className="py-3 px-3 text-center font-bold text-indigo-900 bg-indigo-50/50">{item.week > 0 ? item.week : '-'}</td><td className="py-3 px-3 text-center font-bold text-purple-900 bg-purple-50/50">{item.month > 0 ? item.month : '-'}</td></tr>
-                                                        )) : (<tr><td colSpan="5" className="py-8 text-center text-slate-400 italic">Sem dados de consumo registados ainda.</td></tr>)}
+                                                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                                <td className="py-3 px-3 font-bold text-slate-700">{item.name}</td>
+                                                                <td className="py-3 px-3 text-xs text-slate-500 font-mono">{item.ca}</td>
+                                                                <td className="py-3 px-3 text-center font-bold text-blue-900 bg-blue-50/50">{item.today > 0 ? item.today : '-'}</td>
+                                                                <td className="py-3 px-3 text-center font-bold text-indigo-900 bg-indigo-50/50">{item.week > 0 ? item.week : '-'}</td>
+                                                                <td className="py-3 px-3 text-center font-bold text-purple-900 bg-purple-50/50">{item.month > 0 ? item.month : '-'}</td>
+                                                            </tr>
+                                                        )) : (
+                                                            <tr><td colSpan="5" className="py-8 text-center text-slate-400 italic">Sem dados de consumo registados ainda.</td></tr>
+                                                        )}
                                                     </tbody>
                                                 </table>
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* ALERTAS DE ESTOQUE */}
                                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Icon name="AlertTriangle" className="text-amber-500"/> Níveis de Estoque Crítico</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {inventory.filter(i => i.quantity < 5).map(item => (<div key={item.id} className="p-4 bg-amber-50 border border-amber-100 rounded-lg flex justify-between items-center"><div><p className="font-bold text-slate-800">{item.name}</p><p className="text-xs text-amber-700 font-medium">CA: {item.ca}</p></div><span className="text-xl font-bold text-amber-600">{isNaN(item.quantity) ? 'Erro' : item.quantity} un</span></div>))}
+                                            {inventory.filter(i => i.quantity < 5).map(item => (
+                                                <div key={item.id} className="p-4 bg-amber-50 border border-amber-100 rounded-lg flex justify-between items-center"><div><p className="font-bold text-slate-800">{item.name}</p><p className="text-xs text-amber-700 font-medium">CA: {item.ca}</p></div><span className="text-xl font-bold text-amber-600">{isNaN(item.quantity) ? 'Erro' : item.quantity} un</span></div>
+                                            ))}
                                             {inventory.filter(i => i.quantity < 5).length === 0 && <p className="text-sm text-slate-400 italic">Todos os itens com estoque adequado.</p>}
                                         </div>
                                     </div>
                                 </div>
                             )}
 
+                            {/* GESTÃO DE EMPRESAS/FILIAIS */}
                             {view === 'companies' && !isSuperAdmin && (
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                                     <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1117,7 +1162,13 @@
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {groupedPendingDeliveries.map(del=>(
                                         <div key={del.batchId || del.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
-                                            <div><p className="font-bold text-slate-800 text-lg">{del.employeeName}</p><p className="text-sm text-slate-500 font-medium">{del.totalItems > 1 ? `${del.totalItems} itens para assinar` : `${del.epiName} (x${del.quantityDelivered})`}</p><p className="text-xs text-slate-400 mt-2">{del.createdAt?.toDate ? del.createdAt.toDate().toLocaleString('pt-BR') : new Date(del.createdAt?.seconds ? del.createdAt.seconds*1000 : del.createdAt).toLocaleString('pt-BR')}</p></div>
+                                            <div>
+                                                <p className="font-bold text-slate-800 text-lg">{del.employeeName}</p>
+                                                <p className="text-sm text-slate-500 font-medium">
+                                                    {del.totalItems > 1 ? `${del.totalItems} itens para assinar` : `${del.epiName} (x${del.quantityDelivered})`}
+                                                </p>
+                                                <p className="text-xs text-slate-400 mt-2">{del.createdAt?.toDate ? del.createdAt.toDate().toLocaleString('pt-BR') : new Date(del.createdAt?.seconds ? del.createdAt.seconds*1000 : del.createdAt).toLocaleString('pt-BR')}</p>
+                                            </div>
                                             <button onClick={()=>{setPendingDeliveryToSign(del); toggleModal('sign', true)}} className="mt-auto w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-brand-700 transition-colors">Coletar Assinatura</button>
                                         </div>
                                     ))}
@@ -1129,8 +1180,34 @@
                                 <div>
                                     {!selectedEmployeeForReport ? (
                                         <div className="space-y-4">
-                                            <div className="relative"><input type="text" placeholder="Buscar colaborador nos relatórios..." className="w-full p-4 pl-12 bg-white border border-slate-200 rounded-xl shadow-sm outline-none focus:border-brand-500 transition-all text-sm font-medium" value={reportSearch} onChange={(e) => setReportSearch(e.target.value)} /><div className="absolute left-4 top-4 text-slate-400"><Icon name="Search" size={20} /></div></div>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">{employees.filter(e => e.name.toLowerCase().includes(reportSearch.toLowerCase()) || e.role.toLowerCase().includes(reportSearch.toLowerCase())).map(e=>(<button key={e.id} onClick={()=>setSelectedEmployeeForReport(e)} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all relative overflow-hidden group"><div className="absolute top-0 right-0 bg-slate-50 text-slate-400 text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-bl-xl border-b border-l border-slate-200">{getCompanyAlias(e)}</div><p className="font-bold text-slate-800">{e.name}</p><p className="text-xs text-slate-500 uppercase">{e.role}</p></button>))}</div>
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Buscar colaborador nos relatórios..."
+                                                    className="w-full p-4 pl-12 bg-white border border-slate-200 rounded-xl shadow-sm outline-none focus:border-brand-500 transition-all text-sm font-medium"
+                                                    value={reportSearch}
+                                                    onChange={(e) => setReportSearch(e.target.value)}
+                                                />
+                                                <div className="absolute left-4 top-4 text-slate-400">
+                                                    <Icon name="Search" size={20} />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                {employees
+                                                    .filter(e => e.name.toLowerCase().includes(reportSearch.toLowerCase()) || e.role.toLowerCase().includes(reportSearch.toLowerCase()))
+                                                    .map(e=>(
+                                                        <button key={e.id} onClick={()=>setSelectedEmployeeForReport(e)} className="p-6 bg-white border border-slate-200 rounded-xl hover:shadow-md text-left transition-all relative overflow-hidden group">
+                                                            <div className="absolute top-0 right-0 bg-slate-50 text-slate-400 text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-bl-xl border-b border-l border-slate-200">{getCompanyAlias(e)}</div>
+                                                            <p className="font-bold text-slate-800">{e.name}</p>
+                                                            <p className="text-xs text-slate-500 uppercase">{e.role}</p>
+                                                        </button>
+                                                    ))
+                                                }
+                                                {employees.length > 0 && employees.filter(e => e.name.toLowerCase().includes(reportSearch.toLowerCase())).length === 0 && (
+                                                    <div className="col-span-3 text-center py-8 text-slate-400">Nenhum colaborador encontrado com este nome.</div>
+                                                )}
+                                            </div>
                                         </div>
                                     ) : (
                                         (() => {
@@ -1139,52 +1216,98 @@
                                             return (
                                                 <div className="bg-white rounded-xl shadow-lg print-content p-10">
                                                     <div className="border-b-2 border-slate-900 pb-6 mb-6">
-                                                        <div className="flex justify-between items-start mb-6"><div><h1 className="text-2xl font-black text-slate-900 mb-1">FICHA DE EPI</h1><p className="text-xs font-bold text-slate-400 tracking-widest uppercase">SEGURANÇA DO TRABALHO</p></div><div className="text-right"><p className="text-xs font-bold text-slate-900 uppercase">{empComp.razao}</p><p className="text-xs text-slate-500 font-mono">CNPJ: {empComp.cnpj}</p></div></div>
-                                                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex justify-between items-center"><div><p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">COLABORADOR</p><p className="font-bold text-lg text-slate-800">{selectedEmployeeForReport.name}</p></div><div className="text-right"><p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">FUNÇÃO / SETOR</p><p className="text-sm font-bold text-slate-700 uppercase">{selectedEmployeeForReport.role} | {selectedEmployeeForReport.sector}</p></div></div>
+                                                        <div className="flex justify-between items-start mb-6">
+                                                            <div>
+                                                                <h1 className="text-2xl font-black text-slate-900 mb-1">FICHA DE EPI</h1>
+                                                                <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">SEGURANÇA DO TRABALHO</p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-xs font-bold text-slate-900 uppercase">{empComp.razao}</p>
+                                                                <p className="text-xs text-slate-500 font-mono">CNPJ: {empComp.cnpj}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex justify-between items-center">
+                                                            <div className="text-center md:text-left w-full md:w-auto mb-4 md:mb-0">
+                                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Colaborador Titular</p>
+                                                                <p className="text-2xl font-black text-slate-900 tracking-tight">{selectedEmployeeForReport.name}</p>
+                                                            </div>
+                                                            <div className="text-center md:text-right w-full md:w-auto">
+                                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Cargo / Setor</p>
+                                                                <p className="text-lg font-bold text-slate-600">{selectedEmployeeForReport.role} — {selectedEmployeeForReport.sector}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="bg-white border-l-8 border-slate-900 pl-6 py-2 text-sm font-bold text-slate-700 mb-10 text-justify leading-relaxed">
+                                                            <strong>TERMO DE RESPONSABILIDADE:</strong> Declaro ter recebido os Equipamentos de Proteção Individual listados abaixo em perfeito estado de conservação e funcionamento. Assumo o compromisso de os utilizar obrigatoriamente durante toda a minha jornada de trabalho, zelar pela sua guarda e conservação, e comunicar imediatamente a minha chefia sobre qualquer alteração que os torne impróprios para uso, estando ciente das penalidades previstas na lei e nas normas de Segurança do Trabalho.
+                                                        </div>
+
+                                                        <table className="w-full border-collapse">
+                                                            <thead>
+                                                                <tr className="bg-slate-100">
+                                                                    <th className="border-y-4 border-black p-4 text-left font-black text-xs uppercase tracking-widest">Data</th>
+                                                                    <th className="border-y-4 border-black p-4 text-left font-black text-xs uppercase tracking-widest">Descrição do Equipamento</th>
+                                                                    <th className="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest">CA. Reg.</th>
+                                                                    <th className="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest">Qtd</th>
+                                                                    <th className="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest">Assinatura Digital</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {deliveries.filter(d => d.employeeId === selectedEmployeeForReport.id && d.status === 'signed').map((del, i) => (
+                                                                    <tr key={del.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                                                                        <td className="border-b border-slate-200 p-4 font-black text-sm">{del.createdAt?.toDate ? del.createdAt.toDate().toLocaleDateString('pt-BR') : new Date(del.createdAt?.seconds ? del.createdAt.seconds*1000 : del.createdAt).toLocaleDateString('pt-BR')}</td>
+                                                                        <td className="border-b border-slate-200 p-4 font-black text-slate-800 text-lg uppercase tracking-tight">{del.epiName}</td>
+                                                                        <td className="border-b border-slate-200 p-4 text-center font-mono font-bold text-slate-500">{del.epiCA}</td>
+                                                                        <td className="border-b border-slate-200 p-4 text-center font-black text-lg">{del.quantityDelivered}</td>
+                                                                        <td className="border-b border-slate-200 p-4 flex justify-center">
+                                                                            <div className="relative">
+                                                                                <img src={del.signature} className="h-14 w-32 object-contain filter contrast-125 mix-blend-multiply" alt="Assinatura" />
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                        
+                                                        <div className="mt-16 pt-6 border-t-2 border-dashed border-slate-300 text-center">
+                                                            <p className="text-[10px] font-mono font-bold text-slate-400">Documento gerado eletronicamente por EPI PRO SAAS. A integridade desta ficha é mantida através de logs de auditoria selados pelo servidor.</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-[10px] text-justify text-slate-600 mb-8"><strong>TERMO:</strong> Declaro ter recebido os EPIs abaixo em perfeitas condições, comprometendo-me a usá-los para os fins a que se destinam e zelar pela sua guarda e comunicar qualquer alteração que os torne impróprios, conforme NR-06. A assinatura digital abaixo valida juridicamente este recebimento.</div>
-                                                    <table className="w-full text-xs text-left">
-                                                        <thead className="border-b-2 border-slate-800 font-bold uppercase"><tr><th className="py-2 w-20">Data</th><th>EPI</th><th className="w-20">CA</th><th className="text-center w-12">Qtd</th><th className="text-center w-48">Assinatura</th></tr></thead>
-                                                        <tbody>
-                                                            {deliveries.filter(d=>d.employeeId===selectedEmployeeForReport.id && d.status==='signed').map(d=>(
-                                                                <tr key={d.id} className="border-b border-slate-100"><td className="py-3">{d.createdAt?.toDate ? d.createdAt.toDate().toLocaleDateString('pt-BR') : new Date(d.createdAt?.seconds ? d.createdAt.seconds*1000 : d.createdAt).toLocaleDateString('pt-BR')}</td><td>{d.epiName}</td><td>{d.epiCA}</td><td className="text-center">{d.quantityDelivered}</td><td className="text-center py-2"><img src={d.signature} className="h-16 w-32 object-contain mx-auto" /></td></tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                    <button onClick={()=>setSelectedEmployeeForReport(null)} className="mt-8 px-4 py-2 text-slate-500 font-bold text-xs bg-slate-100 rounded hover:bg-slate-200 no-print">Voltar</button>
-                                                    <button onClick={()=>window.print()} className="mt-8 ml-2 px-4 py-2 bg-brand-700 text-white font-bold text-xs rounded hover:bg-brand-800 no-print">Imprimir</button>
                                                 </div>
                                             );
                                         })()
                                     )}
                                 </div>
                             )}
+
                         </div>
                     </main>
 
                     {/* MODAIS */}
-                    <Modal isOpen={modals.addCompany} onClose={()=>toggleModal('addCompany', false)} title="Cadastrar Nova Empresa">
-                        <div className="space-y-4">
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome Fantasia / Apelido (ex: Matriz)" value={newCompany.alias} onChange={e=>setNewCompany({...newCompany, alias:e.target.value})} />
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Razão Social Completa" value={newCompany.razao} onChange={e=>setNewCompany({...newCompany, razao:e.target.value})} />
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 font-mono" placeholder="CNPJ (00.000.000/0000-00)" value={newCompany.cnpj} onChange={e=>setNewCompany({...newCompany, cnpj:e.target.value})} />
-                            <button onClick={handleAddCompany} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900">Salvar Empresa</button>
+                    <Modal isOpen={modals.addCompany} onClose={() => toggleModal('addCompany', false)} title="Registar Nova Empresa">
+                        <div className="space-y-5">
+                            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Nome Curto (Apelido)</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Ex: Filial Norte" value={newCompany.alias} onChange={e=>setNewCompany({...newCompany, alias:e.target.value})} /></div>
+                            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Razão Social Oficial</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Empresa XYZ LTDA" value={newCompany.razao} onChange={e=>setNewCompany({...newCompany, razao:e.target.value})} /></div>
+                            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">CNPJ</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-mono font-bold" placeholder="00.000.000/0000-00" value={newCompany.cnpj} onChange={e=>setNewCompany({...newCompany, cnpj:e.target.value})} /></div>
+                            <button onClick={handleAddCompany} className="w-full mt-4 bg-brand-600 text-white py-4 rounded-2xl font-black shadow-lg uppercase tracking-widest text-sm hover:bg-brand-700 active:scale-95 transition-all">Salvar Filial</button>
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.addEmp} onClose={()=>toggleModal('addEmp', false)} title="Novo Colaborador">
-                        <div className="space-y-4">
+                    <Modal isOpen={modals.addEmp} onClose={() => toggleModal('addEmp', false)} title="Registar Colaborador">
+                        <div className="space-y-5">
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">Vincular a qual Empresa?</label>
-                                <select className="w-full p-3 border rounded-lg outline-none bg-white mt-1" value={newEmployee.companyId} onChange={e=>setNewEmployee({...newEmployee, companyId:e.target.value})}>
-                                    <option value="">Selecione a empresa...</option>
-                                    {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Vincular a qual empresa?</label>
+                                <select className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold bg-white" value={newEmployee.companyId} onChange={e=>setNewEmployee({...newEmployee, companyId:e.target.value})}>
+                                    <option value="">Selecione uma opção...</option>
+                                    {companies.map(c => <option key={c.id} value={c.id}>{c.alias} ({c.cnpj})</option>)}
                                 </select>
                             </div>
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome Completo" value={newEmployee.name} onChange={e=>setNewEmployee({...newEmployee, name:e.target.value})} />
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Função" value={newEmployee.role} onChange={e=>setNewEmployee({...newEmployee, role:e.target.value})} />
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Setor" value={newEmployee.sector} onChange={e=>setNewEmployee({...newEmployee, sector:e.target.value})} />
-                            <button onClick={handleAddEmployee} disabled={!newEmployee.companyId} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900 disabled:opacity-50">Salvar</button>
+                            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Nome Completo</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="João Silva" value={newEmployee.name} onChange={e=>setNewEmployee({...newEmployee, name:e.target.value})} /></div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Função</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Soldador" value={newEmployee.role} onChange={e=>setNewEmployee({...newEmployee, role:e.target.value})} /></div>
+                                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Setor</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Oficina" value={newEmployee.sector} onChange={e=>setNewEmployee({...newEmployee, sector:e.target.value})} /></div>
+                            </div>
+                            <button onClick={handleAddEmployee} disabled={!newEmployee.companyId || !newEmployee.name} className="w-full mt-4 bg-brand-600 text-white py-4 rounded-2xl font-black shadow-lg uppercase tracking-widest text-sm hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-40">Adicionar à Lista</button>
                         </div>
                     </Modal>
 
@@ -1193,27 +1316,27 @@
                         {editingEmployee && (
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase">Empresa Vinculada</label>
-                                    <select className="w-full p-3 border rounded-lg outline-none bg-white mt-1" value={editingEmployee.companyId || editingEmployee.company || ''} onChange={e=>setEditingEmployee({...editingEmployee, companyId:e.target.value})}>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Empresa Vinculada</label>
+                                    <select className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold bg-white" value={editingEmployee.companyId || editingEmployee.company || ''} onChange={e=>setEditingEmployee({...editingEmployee, companyId:e.target.value})}>
                                         <option value="">Selecione a empresa...</option>
                                         {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
-                                    <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 mt-1" placeholder="Nome Completo" value={editingEmployee.name} onChange={e=>setEditingEmployee({...editingEmployee, name:e.target.value})} />
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Nome Completo</label>
+                                    <input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Nome Completo" value={editingEmployee.name} onChange={e=>setEditingEmployee({...editingEmployee, name:e.target.value})} />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-xs font-bold text-slate-500 uppercase">Função</label>
-                                        <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 mt-1" placeholder="Função" value={editingEmployee.role} onChange={e=>setEditingEmployee({...editingEmployee, role:e.target.value})} />
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Função</label>
+                                        <input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Função" value={editingEmployee.role} onChange={e=>setEditingEmployee({...editingEmployee, role:e.target.value})} />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-slate-500 uppercase">Setor</label>
-                                        <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 mt-1" placeholder="Setor" value={editingEmployee.sector} onChange={e=>setEditingEmployee({...editingEmployee, sector:e.target.value})} />
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Setor</label>
+                                        <input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Setor" value={editingEmployee.sector} onChange={e=>setEditingEmployee({...editingEmployee, sector:e.target.value})} />
                                     </div>
                                 </div>
-                                <button onClick={handleUpdateEmployee} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900 mt-4 transition-colors">Salvar Alterações</button>
+                                <button onClick={handleUpdateEmployee} className="w-full mt-4 bg-brand-600 text-white py-4 rounded-2xl font-black shadow-lg uppercase tracking-widest text-sm hover:bg-brand-700 active:scale-95 transition-all">Salvar Alterações</button>
                             </div>
                         )}
                     </Modal>
@@ -1225,58 +1348,98 @@
                                 Você está prestes a alterar a empresa de <strong className="text-brand-700">{selectedEmployees.length}</strong> colaborador(es).
                             </p>
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">Nova Empresa Destino</label>
-                                <select className="w-full p-3 border rounded-lg outline-none bg-white mt-1 focus:ring-2 focus:ring-brand-500" value={bulkCompanyId} onChange={e=>setBulkCompanyId(e.target.value)}>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Nova Empresa Destino</label>
+                                <select className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold bg-white" value={bulkCompanyId} onChange={e=>setBulkCompanyId(e.target.value)}>
                                     <option value="">Selecione...</option>
                                     {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
                                 </select>
                             </div>
-                            <button onClick={handleBulkUpdateCompany} disabled={!bulkCompanyId} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900 disabled:opacity-50 transition-colors">Confirmar Migração</button>
+                            <button onClick={handleBulkUpdateCompany} disabled={!bulkCompanyId} className="w-full mt-4 bg-brand-600 text-white py-4 rounded-2xl font-black shadow-lg uppercase tracking-widest text-sm hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50">Confirmar Migração</button>
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.addInv} onClose={()=>toggleModal('addInv', false)} title="Novo EPI">
-                        <div className="space-y-4">
-                            <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome" value={newInventory.name} onChange={e=>setNewInventory({...newInventory, name:e.target.value})} />
-                            <div className="flex gap-4"><input className="flex-1 p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="CA" value={newInventory.ca} onChange={e=>setNewInventory({...newInventory, ca:e.target.value})} /><input type="number" className="w-24 p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Qtd" value={newInventory.quantity} onChange={e=>setNewInventory({...newInventory, quantity:e.target.value})} /></div>
-                            <button onClick={handleAddInventory} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900">Cadastrar</button>
-                        </div>
-                    </Modal>
-
-                    <Modal isOpen={modals.addStock} onClose={()=>toggleModal('addStock', false)} title="Adicionar Estoque">
-                        <div className="space-y-4">
-                            <p>Atual: <b>{isNaN(stockToAdd.current) ? 0 : stockToAdd.current}</b></p>
-                            <input type="number" autoFocus className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 text-center text-xl font-bold" placeholder="+0" value={stockToAdd.add} onChange={e=>setStockToAdd({...stockToAdd, add:e.target.value})} />
-                            <button onClick={handleAddStock} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700">Confirmar</button>
-                        </div>
-                    </Modal>
-
-                    <Modal isOpen={modals.delivery} onClose={() => { toggleModal('delivery', false); setDeliveryCart([]); setDeliveryEmployeeId(''); }} title="Nova Entrega">
-                        <div className="space-y-6">
-                            <div><label className="text-xs font-bold text-slate-500 uppercase">Colaborador</label><SearchableSelect options={employees.map(e=>({value:e.id, label:e.name, main:e.name, sub:e.role}))} value={deliveryEmployeeId} onChange={setDeliveryEmployeeId} placeholder="Buscar..." disabled={deliveryCart.length>0} /></div>
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                                <label className="text-xs font-bold text-slate-500 uppercase">Adicionar Item</label>
-                                <div className="flex gap-3">
-                                    <div className="flex-1"><SearchableSelect options={inventory.filter(i=>i.quantity>0).map(i=>({value:i.id, label:i.name, main:i.name, sub:`CA: ${i.ca} (${i.quantity})`}))} value={currentEpiSelection.id} onChange={v=>setCurrentEpiSelection(p=>({...p, id:v}))} placeholder="EPI..." /></div>
-                                    <input type="number" min="1" className="w-16 p-2 rounded border outline-none text-center" placeholder="1" value={currentEpiSelection.qty} onChange={e=>setCurrentEpiSelection(p=>({...p, qty:e.target.value}))} />
-                                </div>
-                                <button onClick={addToCart} className="w-full py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded hover:bg-slate-100">Adicionar</button>
+                    <Modal isOpen={modals.addInv} onClose={() => toggleModal('addInv', false)} title="Registar Equipamento">
+                        <div className="space-y-5">
+                            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Nome do Equipamento</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Luva de Raspa" value={newInventory.name} onChange={e=>setNewInventory({...newInventory, name:e.target.value})} /></div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">CA. Registo</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-mono font-bold" placeholder="12345" value={newInventory.ca} onChange={e=>setNewInventory({...newInventory, ca:e.target.value})} /></div>
+                                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Qtd Inicial</label><input type="number" className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="0" value={newInventory.quantity} onChange={e=>setNewInventory({...newInventory, quantity:e.target.value})} /></div>
                             </div>
+                            <button onClick={handleAddInventory} disabled={!newInventory.name} className="w-full mt-4 bg-brand-600 text-white py-4 rounded-2xl font-black shadow-lg uppercase tracking-widest text-sm hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-40">Salvar Equipamento</button>
+                        </div>
+                    </Modal>
+
+                    <Modal isOpen={modals.addStock} onClose={()=>toggleModal('addStock', false)} title="Reforçar Stock" maxWidth="max-w-md">
+                        <div className="space-y-6 text-center">
+                            <p className="text-slate-500 font-bold">Saldo Atual: <span className="text-2xl font-black text-slate-800">{isNaN(stockToAdd.current) ? 0 : stockToAdd.current} un</span></p>
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 text-left block">Quantas unidades chegaram?</label>
+                                <input type="number" autoFocus className="w-full p-6 mt-1 border-4 border-slate-100 rounded-[32px] outline-none focus:border-brand-500 text-center text-4xl font-black text-brand-600" placeholder="+0" value={stockToAdd.add} onChange={e=>setStockToAdd({...stockToAdd, add:e.target.value})} />
+                            </div>
+                            <button onClick={handleAddStock} className="w-full py-5 bg-emerald-500 text-white rounded-2xl font-black shadow-lg uppercase tracking-widest text-sm hover:bg-emerald-600 active:scale-95 transition-all">Confirmar Entrada</button>
+                        </div>
+                    </Modal>
+
+                    {/* MODAL NOVA ENTREGA */}
+                    <Modal isOpen={modals.delivery} onClose={() => { toggleModal('delivery', false); setDeliveryCart([]); setDeliveryEmployeeId(''); }} title="Processar Entrega">
+                        <div className="space-y-8">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-2">Selecione o Colaborador</label>
+                                <select disabled={deliveryCart.length > 0} className="w-full p-5 border-2 rounded-2xl bg-slate-50 font-black text-lg outline-none focus:border-brand-500 border-slate-100 transition-all text-slate-700" value={deliveryEmployeeId} onChange={e => setDeliveryEmployeeId(e.target.value)}>
+                                <option value="">Buscar na lista...</option>
+                                {employees.map(e => <option key={e.id} value={e.id}>{e.name} — {getCompanyDetails(e.companyId).alias}</option>)}
+                                </select>
+                            </div>
+                            
+                            <div className="bg-brand-50 p-6 sm:p-8 rounded-[32px] border-2 border-dashed border-brand-200">
+                                <h4 className="font-black text-brand-900 mb-4 uppercase text-xs tracking-widest flex items-center gap-2"><Icon name="ShoppingCart" size={16}/> Adicionar ao Lote</h4>
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1">
+                                    <SearchableSelect options={inventory.filter(i=>i.quantity>0).map(i=>({value:i.id, label:i.name, main:i.name, sub:`CA: ${i.ca} (${i.quantity})`}))} value={currentEpiSelection.id} onChange={v=>setCurrentEpiSelection(p=>({...p, id:v}))} placeholder="EPI..." />
+                                </div>
+                                <input type="number" min="1" className="w-full sm:w-24 p-4 border-2 rounded-2xl bg-white font-black border-slate-100 outline-none focus:border-brand-500 text-center text-brand-600" placeholder="Qtd" value={currentEpiSelection.qty} onChange={e => setCurrentEpiSelection(p=>({...p, qty:e.target.value}))} />
+                                <button disabled={!currentEpiSelection.id || !deliveryEmployeeId} onClick={addToCart} className="w-full sm:w-auto bg-brand-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg shadow-brand-200 active:scale-95 disabled:opacity-30 transition-all uppercase tracking-widest text-xs flex items-center justify-center"><Icon name="Plus" size={20}/></button>
+                                </div>
+                            </div>
+
                             {deliveryCart.length > 0 && (
-                                <div className="space-y-4">
-                                    <div className="max-h-40 overflow-y-auto border rounded-lg">{deliveryCart.map(i=><div key={i.id} className="p-3 border-b flex justify-between items-center bg-white"><div><p className="font-bold text-sm">{i.name}</p><p className="text-xs text-slate-500">Qtd: {i.qty}</p></div><button onClick={()=>setDeliveryCart(deliveryCart.filter(x=>x.id!==i.id))} className="text-red-400"><Icon name="MinusCircle"/></button></div>)}</div>
-                                    <div className="grid grid-cols-2 gap-3"><button onClick={()=>processDelivery(null)} className="py-3 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Depois</button><button onClick={()=>toggleModal('sign', true)} className="py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900">Assinar</button></div>
+                                <div className="space-y-6 animate-in fade-in slide-in-from-top-4">
+                                <div className="border-2 border-slate-100 rounded-3xl overflow-hidden divide-y divide-slate-100 bg-white shadow-sm">
+                                    {deliveryCart.map(item => (
+                                    <div key={item.id} className="p-5 flex justify-between items-center group hover:bg-slate-50">
+                                        <div>
+                                            <p className="font-black text-lg tracking-tight text-slate-800 leading-none mb-1.5">{item.name}</p>
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Qtd Separada: <span className="text-brand-600 text-xs">{item.qty} un</span></p>
+                                        </div>
+                                        <button onClick={() => setDeliveryCart(deliveryCart.filter(c=>c.id!==item.id))} className="text-slate-300 hover:text-red-500 bg-white p-2 rounded-xl shadow-sm border border-slate-100 transition-all"><Icon name="MinusCircle" size={20}/></button>
+                                    </div>
+                                    ))}
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <button onClick={() => processDelivery(null)} className="bg-slate-100 text-slate-600 py-5 rounded-2xl font-black hover:bg-slate-200 active:scale-95 transition-all uppercase tracking-widest text-sm">Validar Depois</button>
+                                    <button onClick={() => toggleModal('sign', true)} className="bg-emerald-500 text-white py-5 rounded-2xl font-black shadow-xl shadow-emerald-200 hover:bg-emerald-600 active:scale-95 transition-all uppercase tracking-widest text-sm flex justify-center items-center gap-2"><Icon name="PenLine" size={18}/> Assinar Agora</button>
+                                </div>
                                 </div>
                             )}
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.sign} onClose={()=>toggleModal('sign', false)} title="Assinatura" fullScreen={true}>
-                        <SignaturePad 
-                            canImport={permissions.canImportSignature || isSuperAdmin} 
-                            onSave={pendingDeliveryToSign ? signPendingDelivery : processDelivery} 
-                            onCancel={()=>toggleModal('sign', false)} 
-                        />
+                    <Modal isOpen={modals.sign} onClose={()=>toggleModal('sign', false)} title="Recolha de Assinatura" fullScreen={true}>
+                        <div className="flex flex-col h-full items-center p-4">
+                            <div className="w-full max-w-2xl bg-white shadow-sm rounded-2xl overflow-hidden flex flex-col h-[70vh] border border-slate-200 mt-8">
+                                <div className="p-6 text-center border-b border-slate-100 bg-slate-50">
+                                    <p className="font-black text-2xl text-slate-800 uppercase tracking-tighter">{pendingDeliveryToSign ? pendingDeliveryToSign.employeeName : employees.find(e=>e.id===deliveryEmployeeId)?.name}</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Atesto a receção das ferramentas em boas condições</p>
+                                </div>
+                                <div className="flex-1 bg-white">
+                                    <SignaturePad 
+                                        canImport={permissions.canImportSignature || isSuperAdmin} 
+                                        onSave={pendingDeliveryToSign ? signPendingDelivery : processDelivery} 
+                                        onCancel={()=>toggleModal('sign', false)} 
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </Modal>
 
                     {modals.import && (
@@ -1284,30 +1447,30 @@
                             <div className="space-y-4">
                                 {importType === 'employees' && (
                                     <div className="mb-2">
-                                        <label className="text-xs font-bold text-slate-500 uppercase">Empresa Destino</label>
-                                        <select className="w-full p-3 border rounded-lg bg-white mt-1" value={importCompany} onChange={e=>setImportCompany(e.target.value)}>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Empresa Destino</label>
+                                        <select className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold bg-white" value={importCompany} onChange={e=>setImportCompany(e.target.value)}>
                                             <option value="">Selecione...</option>
                                             {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
                                         </select>
                                     </div>
                                 )}
-                                <p className="text-sm text-slate-500 bg-slate-50 p-3 rounded border border-slate-100">
+                                <p className="text-sm font-bold text-slate-500 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                                     Anexe um ficheiro Excel (.xlsx) ou CSV. <br/>
                                     <strong>Ordem das colunas:</strong> {importType === 'employees' ? 'Nome, Função, Setor' : 'Nome, Complemento, CA, Quantidade'}
                                 </p>
-                                <input type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleFileUpload} className="w-full p-2 border border-slate-200 rounded text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
-                                <div className="text-center text-xs text-slate-400 my-2">- OU -</div>
-                                <textarea className="w-full h-32 p-4 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Colar dados manualmente..." value={importText} onChange={e => setImportText(e.target.value)} />
-                                {importText && <button onClick={handleImport} disabled={importType === 'employees' && !importCompany} className="w-full py-3 bg-brand-700 text-white rounded-lg font-bold text-sm hover:bg-brand-900 transition-colors disabled:opacity-50">Importar Texto</button>}
+                                <input type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleFileUpload} className="w-full p-4 border-2 border-slate-100 rounded-2xl text-sm font-bold file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
+                                <div className="text-center text-[10px] font-black uppercase tracking-widest text-slate-300 my-2">- OU -</div>
+                                <textarea className="w-full h-32 p-4 border-2 border-slate-100 rounded-2xl text-sm font-mono font-bold focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Colar dados separados por vírgula manualmente..." value={importText} onChange={e => setImportText(e.target.value)} />
+                                {importText && <button onClick={handleImport} disabled={importType === 'employees' && !importCompany} className="w-full py-4 bg-brand-700 text-white rounded-2xl font-black shadow-lg uppercase tracking-widest text-sm hover:bg-brand-900 transition-colors disabled:opacity-40">Importar Texto</button>}
                             </div>
                         </Modal>
                     )}
                     
                     <Modal isOpen={modals.backup} onClose={() => toggleModal('backup', false)} title="Backup e Migração">
                         <div className="space-y-6">
-                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800"><p className="font-bold mb-1">Instruções:</p><ol className="list-decimal list-inside space-y-1 ml-2"><li>Clique em "Baixar Backup" para salvar os dados atuais.</li><li>Se mudar de conta, use "Restaurar" na nova versão.</li></ol></div>
-                            <button onClick={exportData} className="w-full py-3 bg-slate-800 text-white rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-slate-900 transition-colors"><Icon name="DownloadCloud" size={20} /> Baixar Backup (.json)</button>
-                            <div className="relative border-t border-slate-200 pt-4"><p className="absolute top-1 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-slate-400 font-bold">RESTAURAR NO MEU COFRE</p><label className="block w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-center text-slate-500 font-bold cursor-pointer hover:border-brand-500 hover:text-brand-600 transition-all"><input type="file" accept=".json" onChange={importData} className="hidden" /><span className="flex items-center justify-center gap-2"><Icon name="Upload" size={18}/> Selecionar Arquivo JSON</span></label></div>
+                            <div className="bg-blue-50 p-6 rounded-[32px] border border-blue-100 text-sm font-bold text-blue-800"><p className="font-black mb-2 uppercase tracking-widest text-xs text-blue-600">Instruções:</p><ol className="list-decimal list-inside space-y-2"><li>Clique em "Baixar Backup" para salvar os dados atuais do seu cofre.</li><li>A versão SaaS carrega dados isolados de forma segura por conta de e-mail.</li></ol></div>
+                            <button onClick={exportData} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-lg active:scale-95 uppercase tracking-widest text-sm"><Icon name="DownloadCloud" size={20} /> Baixar Backup (.json)</button>
+                            <div className="relative border-t-2 border-dashed border-slate-200 pt-6 mt-4"><p className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-4 text-[10px] text-slate-400 font-black uppercase tracking-widest">RESTAURAR NO MEU COFRE</p><label className="flex w-full py-5 bg-white border-2 border-slate-100 rounded-2xl text-center font-black text-slate-500 cursor-pointer hover:border-brand-500 hover:text-brand-600 transition-all justify-center items-center shadow-sm"><input type="file" accept=".json" onChange={importData} className="hidden" /><span className="flex items-center justify-center gap-3 uppercase tracking-widest text-sm"><Icon name="Upload" size={20}/> Selecionar Arquivo JSON</span></label></div>
                         </div>
                     </Modal>
 
