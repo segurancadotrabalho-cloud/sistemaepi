@@ -444,7 +444,7 @@
             const [miniModalEpiId, setMiniModalEpiId] = useState('');
             const [miniModalEpiQty, setMiniModalEpiQty] = useState(1);
 
-            const isSuperAdmin = user && user.email === SUPER_ADMIN_EMAIL;
+            const isSuperAdmin = user && user.email?.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase().trim();
 
             // --- DE VOLTA À RAIZ PARTILHADA ---
             const getRef = (collectionName) => {
@@ -467,7 +467,7 @@
                 return getCompanyDetails(identifier).alias;
             };
 
-            // Função toggleModal movida para escopo correto
+            // Função handleToggleModal 
             const handleToggleModal = (name, val) => setModals(prev => ({...prev, [name]: val}));
 
             // Métrica do Dashboard
@@ -552,26 +552,36 @@
                 let unPerms = () => {};
                 let un1 = () => {}, un2 = () => {}, un3 = () => {}, un4 = () => {};
 
-                if (isSuperAdmin) {
-                    unPerms = getRef('permissions').onSnapshot(snap => {
-                        setAdminUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                unPerms = getRef('permissions').onSnapshot(snap => {
+                    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setAdminUsers(data);
+                    
+                    if (isSuperAdmin) {
                         setPermissions({ canImportSignature: true });
-                    }, err);
-                } else {
-                    unPerms = getRef('permissions').where('email', '==', user.email).onSnapshot(snap => {
-                        if (!snap.empty) {
-                            const myPerm = snap.docs[0].data();
-                            setPermissions({ canImportSignature: myPerm.canImportSignature || false });
-                            setMyPermId(snap.docs[0].id);
+                    } else {
+                        const myPerm = data.find(p => p.email && user.email && p.email.toLowerCase().trim() === user.email.toLowerCase().trim());
+                        if (myPerm) {
+                            setPermissions({ canImportSignature: myPerm.canImportSignature === true });
+                            setMyPermId(myPerm.id);
+                        } else {
+                            setPermissions({ canImportSignature: false });
+                            setMyPermId(null);
                         }
-                    }, () => {});
-                }
+                    }
+                }, err);
 
                 if (!isSuperAdmin) {
-                    un1 = getRef('employees').onSnapshot(s => setEmployees(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
-                    un2 = getRef('inventory').onSnapshot(s => setInventory(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
-                    un3 = getRef('deliveries').orderBy('createdAt', 'desc').onSnapshot(s => setDeliveries(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
-                    un4 = getRef('companies').onSnapshot(s => setCompanies(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
+                    const isLegacyUser = user.email && user.email.toLowerCase() === 'segurancadotrabalho@macboot.com.br';
+                    const filterMyData = (snap) => {
+                        return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(item => {
+                            return item.addedBy === user.email || (!item.addedBy && isLegacyUser);
+                        });
+                    };
+
+                    un1 = getRef('employees').onSnapshot(s => setEmployees(filterMyData(s)), err);
+                    un2 = getRef('inventory').onSnapshot(s => setInventory(filterMyData(s)), err);
+                    un3 = getRef('deliveries').orderBy('createdAt', 'desc').onSnapshot(s => setDeliveries(filterMyData(s)), err);
+                    un4 = getRef('companies').onSnapshot(s => setCompanies(filterMyData(s)), err);
                 }
                 
                 return () => { unPerms(); un1(); un2(); un3(); un4(); };
@@ -623,10 +633,10 @@
                         const BATCH_SIZE = 400;
                         let ops = [];
 
-                        if(json.companies) json.companies.forEach(comp => ops.push({ type: 'set', ref: getRef('companies').doc(comp.id || getRef('companies').doc().id), data: { ...comp, createdAt: new Date() } }));
-                        if(json.employees) json.employees.forEach(emp => ops.push({ type: 'set', ref: getRef('employees').doc(emp.id || getRef('employees').doc().id), data: { ...emp, createdAt: new Date() } }));
-                        if(json.inventory) json.inventory.forEach(inv => ops.push({ type: 'set', ref: getRef('inventory').doc(inv.id || getRef('inventory').doc().id), data: { ...inv, quantity: isNaN(parseInt(inv.quantity)) ? 0 : parseInt(inv.quantity), createdAt: new Date() } }));
-                        if(json.deliveries) json.deliveries.forEach(del => ops.push({ type: 'set', ref: getRef('deliveries').doc(del.id || getRef('deliveries').doc().id), data: { ...del, createdAt: new Date(del.createdAt) } }));
+                        if(json.companies) json.companies.forEach(comp => ops.push({ type: 'set', ref: getRef('companies').doc(comp.id || getRef('companies').doc().id), data: { ...comp, createdAt: new Date(), addedBy: comp.addedBy || user.email } }));
+                        if(json.employees) json.employees.forEach(emp => ops.push({ type: 'set', ref: getRef('employees').doc(emp.id || getRef('employees').doc().id), data: { ...emp, createdAt: new Date(), addedBy: emp.addedBy || user.email } }));
+                        if(json.inventory) json.inventory.forEach(inv => ops.push({ type: 'set', ref: getRef('inventory').doc(inv.id || getRef('inventory').doc().id), data: { ...inv, quantity: isNaN(parseInt(inv.quantity)) ? 0 : parseInt(inv.quantity), createdAt: new Date(), addedBy: inv.addedBy || user.email } }));
+                        if(json.deliveries) json.deliveries.forEach(del => ops.push({ type: 'set', ref: getRef('deliveries').doc(del.id || getRef('deliveries').doc().id), data: { ...del, createdAt: new Date(del.createdAt), addedBy: del.addedBy || user.email } }));
 
                         for (let i = 0; i < ops.length; i += BATCH_SIZE) {
                             const batch = db.batch();
@@ -666,17 +676,28 @@
                         const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
 
                         const batch = db.batch();
+                        const colRef = getRef(importType);
                         let added = 0;
                         
-                        jsonData.slice(1).forEach(row => {
+                        const rows = jsonData.slice(1);
+                        
+                        rows.forEach(row => {
                             if(row.length < 3) return;
+                            const docRef = colRef.doc();
                             if(importType === 'employees') {
-                                batch.set(getRef('employees').doc(), { name: row[0], role: row[1], sector: row[2], companyId: importCompany, createdAt: new Date() });
+                                batch.set(docRef, { 
+                                    name: row[0], 
+                                    role: row[1], 
+                                    sector: row[2], 
+                                    companyId: importCompany, 
+                                    createdAt: new Date(),
+                                    addedBy: user.email 
+                                });
                                 added++;
                             } else if(importType === 'inventory') {
                                 const name = row[0]; const ca = row[2];
                                 if(!inventory.some(i => i.name === name && i.ca === ca)) {
-                                    batch.set(getRef('inventory').doc(), { name: row[0], complement: row[1]||'', ca: row[2], quantity: parseInt(row[3])||0, createdAt: new Date() });
+                                    batch.set(docRef, { name: row[0], complement: row[1]||'', ca: row[2], quantity: parseInt(row[3])||0, createdAt: new Date(), addedBy: user.email });
                                     added++;
                                 }
                             }
@@ -699,7 +720,7 @@
             const handleAddCompany = async () => {
                 if(!newCompany.alias || !newCompany.razao) return alert("Preencha todos os campos.");
                 try {
-                    await getRef('companies').add({...newCompany, createdAt: new Date()});
+                    await getRef('companies').add({...newCompany, createdAt: new Date(), addedBy: user.email});
                     handleToggleModal('addCompany', false); setNewCompany({ alias: '', razao: '', cnpj: '' });
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
@@ -707,7 +728,7 @@
             const handleAddEmployee = async () => {
                 if(!newEmployee.companyId || !newEmployee.name) return alert("Nome e Empresa obrigatórios.");
                 try {
-                    await getRef('employees').add({...newEmployee, createdAt: new Date()});
+                    await getRef('employees').add({...newEmployee, createdAt: new Date(), addedBy: user.email});
                     handleToggleModal('addEmp', false); setNewEmployee({name:'', role:'', sector:'', companyId: ''});
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
@@ -749,7 +770,7 @@
             const handleAddInventory = async () => {
                 if(inventory.some(i => i.name === newInventory.name && i.ca === newInventory.ca)) return alert("Item já existe!");
                 try {
-                    await getRef('inventory').add({...newInventory, quantity: +newInventory.quantity, createdAt: new Date()});
+                    await getRef('inventory').add({...newInventory, quantity: +newInventory.quantity, createdAt: new Date(), addedBy: user.email});
                     handleToggleModal('addInv', false); setNewInventory({name:'', ca:'', quantity:0});
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
@@ -770,9 +791,9 @@
                 for (const line of lines) {
                     const p = line.split(/[,;\t]/).map(s => s.trim());
                     if (importType === 'employees' && p.length >= 3) {
-                        batch.set(getRef('employees').doc(), { name: p[0], role: p[1], sector: p[2], companyId: importCompany || null, createdAt: new Date() }); count++;
+                        batch.set(getRef('employees').doc(), { name: p[0], role: p[1], sector: p[2], companyId: importCompany || null, createdAt: new Date(), addedBy: user.email }); count++;
                     } else if (importType === 'inventory' && p.length >= 4) {
-                        batch.set(getRef('inventory').doc(), { name: p[0], complement: p[1], ca: p[2], quantity: parseInt(p[3]) || 0, createdAt: new Date() }); count++;
+                        batch.set(getRef('inventory').doc(), { name: p[0], complement: p[1], ca: p[2], quantity: parseInt(p[3]) || 0, createdAt: new Date(), addedBy: user.email }); count++;
                     }
                 }
                 await batch.commit();
@@ -811,7 +832,8 @@
                             signature, 
                             status: signature ? 'signed' : 'pending', 
                             createdAt: new Date(),
-                            batchId: batchId 
+                            batchId: batchId,
+                            addedBy: user.email
                         });
                         const invRef = getRef('inventory').doc(item.id);
                         const safeCurrentQty = isNaN(item.quantity) ? 0 : item.quantity;
@@ -924,7 +946,7 @@
                                 <div className="space-y-6 max-w-5xl mx-auto">
                                     <div className="bg-brand-700 p-6 rounded-xl text-white shadow-sm">
                                         <h3 className="font-bold text-xl mb-1 flex items-center gap-2"><Icon name="Settings" size={24}/> Gestão de Clientes</h3>
-                                        <p className="text-sm text-brand-100">Controle quais usuários podem usar o sistema e importar assinaturas.</p>
+                                        <p className="text-sm text-brand-100">Controle quais usuários podem importar assinaturas e veja o uso da plataforma.</p>
                                     </div>
 
                                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
