@@ -82,8 +82,23 @@
 
     <script type="text/babel">
         // ==========================================
-        // CONFIGURAÇÃO FIREBASE
+        // CONFIGURAÇÃO FIREBASE E CONSTANTES
         // ==========================================
+        const CONSTANTES_EMPRESAS = {
+            'MACBOOT': {
+                razao: 'MACBOOT INDUSTRIA E COMERCIO DE CALÇADOS LTDA',
+                cnpj: '68.403.583/0001-35',
+                cor: 'bg-slate-800',
+                texto: 'text-white'
+            },
+            'PESPONTO': {
+                razao: 'MACBOOT INDUSTRIA E COMERCIO DE CALÇADOS LTDA',
+                cnpj: '68.403.583/0002-16',
+                cor: 'bg-blue-600',
+                texto: 'text-white'
+            }
+        };
+
         const firebaseConfig = {
             apiKey: "AIzaSyAAV6tC_dn8CBrw6g74gzAtYweiwq_9hPw",
             authDomain: "epimac.firebaseapp.com",
@@ -134,8 +149,8 @@
             Database: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
             DownloadCloud: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>,
             Filter: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
-            Settings: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
             Building: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg>,
+            Settings: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
             Image: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
         };
         const Icon = ({ name, size = 20, className }) => { const Ico = Icons[name]; return Ico ? <Ico width={size} height={size} className={className} /> : null; };
@@ -264,6 +279,7 @@
                 c.getContext('2d').clearRect(0, 0, c.width, c.height);
             };
 
+            // Função que injeta a foto, remove o fundo branco e escurece a caneta
             const handleImageUpload = (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
@@ -275,19 +291,21 @@
                         const ctx = canvas.getContext('2d');
                         ctx.clearRect(0, 0, canvas.width, canvas.height);
                         
+                        // Desenhar a imagem redimensionada
                         const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
                         const x = (canvas.width / 2) - (img.width / 2) * scale;
                         const y = (canvas.height / 2) - (img.height / 2) * scale;
                         ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
+                        // Remover fundo branco e realçar traços escuros
                         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                         const data = imgData.data;
                         for(let i = 0; i < data.length; i += 4) {
                             const r = data[i], g = data[i+1], b = data[i+2];
                             if(r > 150 && g > 150 && b > 150) {
-                                data[i+3] = 0;
+                                data[i+3] = 0; // Torna transparente
                             } else {
-                                data[i] = 0; data[i+1] = 0; data[i+2] = 0;
+                                data[i] = 0; data[i+1] = 0; data[i+2] = 0; // Escurece
                             }
                         }
                         ctx.putImageData(imgData, 0, 0);
@@ -308,6 +326,8 @@
                             onTouchStart={start} onTouchMove={move} onTouchEnd={end}
                         />
                         <div className="absolute bottom-4 right-4 text-xs font-bold text-slate-400 pointer-events-none select-none">ASSINAR AQUI</div>
+                        
+                        {/* Botão de Importação (Apenas se tiver permissão) */}
                         {canImport && (
                             <label className="absolute top-4 right-4 bg-white border border-slate-300 text-slate-600 px-3 py-2 rounded-lg shadow-md cursor-pointer hover:bg-slate-50 flex items-center gap-2 text-xs font-bold transition-all z-10">
                                 <Icon name="Image" size={16} /> Importar Foto
@@ -326,28 +346,14 @@
             );
         };
 
-        const LoginScreen = () => {
+        const LoginScreen = ({ error, loading, handleLogin }) => {
             const [email, setEmail] = useState('');
             const [pass, setPass] = useState('');
-            const [error, setError] = useState('');
-            const [loading, setLoading] = useState(false);
             const [rememberMe, setRememberMe] = useState(false);
 
-            const handleLogin = async (e) => {
-                e.preventDefault(); 
-                setLoading(true); 
-                setError('');
-                try {
-                    const persistence = rememberMe 
-                        ? firebase.auth.Auth.Persistence.LOCAL 
-                        : firebase.auth.Auth.Persistence.SESSION;
-                    
-                    await auth.setPersistence(persistence);
-                    await auth.signInWithEmailAndPassword(email, pass);
-                } catch(e) { 
-                    setLoading(false); 
-                    setError("Credenciais inválidas."); 
-                }
+            const onSubmit = (e) => {
+                e.preventDefault();
+                handleLogin(email, pass, rememberMe);
             };
 
             return (
@@ -357,7 +363,7 @@
                             <div className="w-16 h-16 bg-brand-700 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg"><Icon name="ShieldCheck" size={40} /></div>
                             <h2 className="text-2xl font-bold text-slate-800">SISTEMA EPI</h2><p className="text-slate-500 text-sm mt-1">Acesso Restrito</p>
                         </div>
-                        <form onSubmit={handleLogin} className="space-y-4">
+                        <form onSubmit={onSubmit} className="space-y-4">
                             <div><label className="text-xs font-bold text-slate-600 uppercase">Email da Conta</label><input type="email" required className="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500" value={email} onChange={e=>setEmail(e.target.value)} /></div>
                             <div><label className="text-xs font-bold text-slate-600 uppercase">Senha</label><input type="password" required className="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-500" value={pass} onChange={e=>setPass(e.target.value)} /></div>
                             <div className="flex items-center gap-2">
@@ -374,38 +380,38 @@
 
         // --- APP PRINCIPAL ---
         function App() {
+            // Conta de Administrador
             const SUPER_ADMIN_EMAIL = 'gabriel.sousasst@outlook.com';
+
+            // --- ESTADOS DO SISTEMA E AUTENTICAÇÃO ---
             const [user, setUser] = useState(null);
-            
-            // --- ESTADOS DO ADMIN E PERMISSÕES ---
+            const [authLoading, setAuthLoading] = useState(true);
+            const [authError, setAuthError] = useState('');
+            const [permissionError, setPermissionError] = useState(false);
+
+            // --- ESTADOS DO PAINEL ADMIN E PERMISSÕES ---
             const [permissions, setPermissions] = useState({ canImportSignature: false });
             const [adminUsers, setAdminUsers] = useState([]);
             const [newAdmin, setNewAdmin] = useState({ email: '', canImportSignature: false });
             const [myPermId, setMyPermId] = useState(null);
 
             const [view, setView] = useState('dashboard');
-            
-            // Dados SaaS (Separados por UID do usuário logado)
             const [companies, setCompanies] = useState([]);
             const [employees, setEmployees] = useState([]);
             const [inventory, setInventory] = useState([]);
             const [deliveries, setDeliveries] = useState([]);
-            
-            const [permissionError, setPermissionError] = useState(false);
             const [isSidebarOpen, setSidebarOpen] = useState(false);
             const [reportSearch, setReportSearch] = useState('');
             const [employeeSearch, setEmployeeSearch] = useState('');
             const [employeeCompanyFilter, setEmployeeCompanyFilter] = useState('TODOS');
 
-            // --- ESTADOS NOVOS PARA EDIÇÃO EM MASSA E INDIVIDUAL ---
+            // --- ESTADOS PARA EDIÇÃO EM MASSA E INDIVIDUAL ---
             const [selectedEmployees, setSelectedEmployees] = useState([]);
             const [editingEmployee, setEditingEmployee] = useState(null);
             const [bulkCompanyId, setBulkCompanyId] = useState('');
 
-            // Modais
+            // Modais e Formulários
             const [modals, setModals] = useState({ import: false, addCompany: false, addEmp: false, editEmp: false, bulkEdit: false, addInv: false, addStock: false, delivery: false, sign: false, backup: false });
-            
-            // Dados Form
             const [importType, setImportType] = useState(null);
             const [importText, setImportText] = useState('');
             const [newCompany, setNewCompany] = useState({ alias: '', razao: '', cnpj: '' });
@@ -413,7 +419,6 @@
             const [newInventory, setNewInventory] = useState({ name: '', complement: '', ca: '', quantity: 0 });
             const [stockToAdd, setStockToAdd] = useState({ id: '', current: 0, add: '' });
             const [importCompany, setImportCompany] = useState('');
-            
             const [deliveryEmployeeId, setDeliveryEmployeeId] = useState('');
             const [currentEpiSelection, setCurrentEpiSelection] = useState({ id: '', qty: 1 });
             const [deliveryCart, setDeliveryCart] = useState([]);
@@ -422,10 +427,27 @@
 
             const isSuperAdmin = user && user.email === SUPER_ADMIN_EMAIL;
 
-            // --- HELPERS SAAS ---
-            // Em vez de usar root collections, usa users/{uid}/...
-            const getRef = (col) => db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection(col);
-            const getTenantDoc = (col, docId) => getRef(col).doc(docId);
+            // --- FUNÇÃO DE BASE DE DADOS (APONTA PARA A RAIZ PARTILHADA) ---
+            const getRef = (collectionName) => {
+                return db.collection('artifacts').doc(appId).collection(collectionName);
+            };
+
+            // Funções robustas para ler empresas (mesmo as antigas)
+            const getCompanyDetails = (identifier) => {
+                if (!identifier) return { alias: 'N/D', razao: 'Não Cadastrada', cnpj: '' };
+                const comp = companies.find(c => c.id === identifier || c.alias === identifier);
+                if (comp) return comp;
+                // Fallback para os dados antigos
+                const legacyComp = CONSTANTES_EMPRESAS[identifier];
+                if (legacyComp) return { alias: identifier, razao: legacyComp.razao, cnpj: legacyComp.cnpj };
+                return { alias: identifier, razao: 'Não Cadastrada', cnpj: '' };
+            };
+
+            const getCompanyAlias = (emp) => {
+                if (!emp) return 'N/D';
+                const identifier = emp.companyId || emp.company || 'MACBOOT';
+                return getCompanyDetails(identifier).alias;
+            };
 
             // Métrica do Dashboard
             const dashboardMetrics = useMemo(() => {
@@ -440,7 +462,7 @@
 
                 deliveries.forEach(d => {
                     if (d.status !== 'signed') return;
-                    const dDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(d.createdAt?.seconds ? d.createdAt.seconds*1000 : d.createdAt);
+                    const dDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
                     const qty = parseInt(d.quantityDelivered) || 1;
                     const id = d.epiId || d.epiName;
 
@@ -467,71 +489,92 @@
                 return stats;
             }, [deliveries]);
 
+            // --- AUTENTICAÇÃO ---
             useEffect(() => {
                 const unsub = auth.onAuthStateChanged(u => {
                     setUser(u);
+                    setAuthLoading(false);
                     document.getElementById('initial-loader').style.display = 'none';
                 });
                 return unsub;
             }, []);
 
+            const handleLogin = async (email, pass, rememberMe) => {
+                setAuthLoading(true);
+                setAuthError('');
+                try {
+                    const persistence = rememberMe ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
+                    await auth.setPersistence(persistence);
+                    await auth.signInWithEmailAndPassword(email.toLowerCase().trim(), pass);
+                } catch(e) {
+                    setAuthLoading(false);
+                    setAuthError("Credenciais inválidas ou acesso não autorizado.");
+                }
+            };
+
+            const handleLogout = () => { auth.signOut(); };
+
+            // Forçar Admin Panel se for o Super Admin
             useEffect(() => {
                 if (isSuperAdmin && view !== 'admin-panel') {
                     setView('admin-panel');
                 }
-            }, [isSuperAdmin]);
+            }, [isSuperAdmin, view]);
 
+            // --- CARREGAR DADOS ---
             useEffect(() => {
                 if(!user || !db) return;
-                const err = (e) => { console.error(e); if(e.code === 'permission-denied') setPermissionError(true); };
                 
-                // 1. CARREGAR PERMISSÕES GLOBAIS
-                const unPerms = db.collection('artifacts').doc(appId).collection('permissions').onSnapshot(snap => {
-                    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    setAdminUsers(data);
-                    if (!isSuperAdmin) {
-                        const myPerm = data.find(p => p.email === user.email);
-                        if (myPerm) {
-                            setMyPermId(myPerm.id);
-                            setPermissions({ canImportSignature: myPerm.canImportSignature || false });
-                        }
-                    }
-                }, err);
+                const err = (e) => { 
+                    console.error(e); 
+                    // Mostra o modal apenas se não for o super admin verificando a tabela normal
+                    if(e.code === 'permission-denied' && !isSuperAdmin) setPermissionError(true); 
+                };
+                
+                let unPerms = () => {};
+                let un1 = () => {}, un2 = () => {}, un3 = () => {}, un4 = () => {};
 
-                // 2. CARREGAR DADOS DO COFRE (Apenas se não for Admin, pois Admin não precisa carregar os dados de EPI dele mesmo)
-                let unsubscribes = [];
-                if (!isSuperAdmin) {
-                    const un1 = getRef('employees').onSnapshot(s => setEmployees(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
-                    const un2 = getRef('inventory').onSnapshot(s => setInventory(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
-                    const un3 = getRef('deliveries').onSnapshot(s => {
-                        const sorted = s.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b) => {
-                            const timeA = a.createdAt?.seconds || 0;
-                            const timeB = b.createdAt?.seconds || 0;
-                            return timeB - timeA;
-                        });
-                        setDeliveries(sorted);
+                // Admin carrega todas as permissões. User normal procura apenas a dele para ver se tem botão de foto.
+                if (isSuperAdmin) {
+                    unPerms = getRef('permissions').onSnapshot(snap => {
+                        setAdminUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                        setPermissions({ canImportSignature: true });
                     }, err);
-                    const un4 = getRef('companies').onSnapshot(s => setCompanies(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
-                    unsubscribes = [un1, un2, un3, un4];
+                } else {
+                    unPerms = getRef('permissions').where('email', '==', user.email).onSnapshot(snap => {
+                        if (!snap.empty) {
+                            const myPerm = snap.docs[0].data();
+                            setPermissions({ canImportSignature: myPerm.canImportSignature || false });
+                            setMyPermId(snap.docs[0].id);
+                        }
+                    }, () => {}); // Ignora silenciosamente se o firebase bloquear a leitura aqui
+                }
+
+                // Carregar dados de EPI apenas se não for o Admin
+                if (!isSuperAdmin) {
+                    un1 = getRef('employees').onSnapshot(s => setEmployees(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
+                    un2 = getRef('inventory').onSnapshot(s => setInventory(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
+                    un3 = getRef('deliveries').orderBy('createdAt', 'desc').onSnapshot(s => setDeliveries(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
+                    un4 = getRef('companies').onSnapshot(s => setCompanies(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
                 }
                 
-                return () => { unPerms(); unsubscribes.forEach(u => u()); };
+                return () => { unPerms(); un1(); un2(); un3(); un4(); };
             }, [user, isSuperAdmin]);
 
             // Atualiza quantidade de funcionários na tabela de permissões para o Admin ver
             useEffect(() => {
                 if (!isSuperAdmin && user && myPermId && employees.length >= 0) {
-                    db.collection('artifacts').doc(appId).collection('permissions').doc(myPermId).update({
+                    getRef('permissions').doc(myPermId).update({
                         employeeCount: employees.length
-                    }).catch(console.error);
+                    }).catch(() => {}); // Ignora silenciosamente erros de permissão ao atualizar contagem
                 }
             }, [employees.length, myPermId, isSuperAdmin, user]);
 
-            // --- FUNÇÕES DE ADMINISTRAÇÃO (GABRIEL) ---
+            // --- FUNÇÕES DO PAINEL ADMIN (SÓ PARA O GABRIEL) ---
             const handleAddAdminUser = async () => {
                 if (!newAdmin.email) return alert("Preencha o e-mail.");
                 try {
-                    await db.collection('artifacts').doc(appId).collection('permissions').add({
+                    await getRef('permissions').add({
                         email: newAdmin.email.toLowerCase().trim(),
                         canImportSignature: newAdmin.canImportSignature,
                         employeeCount: 0
@@ -542,26 +585,17 @@
 
             const handleDeleteAdminUser = async (id) => {
                 if(!confirm("Remover o acesso deste utilizador?")) return;
-                try { await db.collection('artifacts').doc(appId).collection('permissions').doc(id).delete(); } 
+                try { await getRef('permissions').doc(id).delete(); } 
                 catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
             const togglePermission = async (id, currentVal) => {
-                try { await db.collection('artifacts').doc(appId).collection('permissions').doc(id).update({ canImportSignature: !currentVal }); }
+                try { await getRef('permissions').doc(id).update({ canImportSignature: !currentVal }); }
                 catch(e) { console.error(e); }
             };
 
-            // Funções Originais de Negócio (Adaptadas para o Cofre / Tenant)
+            // --- FUNÇÕES ORIGINAIS DO SISTEMA ---
             const toggleModal = (name, val) => setModals(prev => ({...prev, [name]: val}));
-
-            const getCompanyAlias = (emp) => {
-                const comp = companies.find(c => c.id === emp.companyId || c.alias === emp.company);
-                return comp ? comp.alias : 'N/D';
-            };
-
-            const getCompanyDetails = (compId) => {
-                return companies.find(c => c.id === compId) || { alias: 'N/D', razao: 'Não Cadastrada', cnpj: '' };
-            }
 
             const importData = (e) => {
                 const file = e.target.files[0];
@@ -576,10 +610,10 @@
                         const BATCH_SIZE = 400;
                         let ops = [];
 
-                        if(json.companies) json.companies.forEach(comp => ops.push({ type: 'set', ref: getTenantDoc('companies', comp.id || getRef('companies').doc().id), data: { ...comp, createdAt: new Date() } }));
-                        if(json.employees) json.employees.forEach(emp => ops.push({ type: 'set', ref: getTenantDoc('employees', emp.id || getRef('employees').doc().id), data: { ...emp, createdAt: new Date() } }));
-                        if(json.inventory) json.inventory.forEach(inv => ops.push({ type: 'set', ref: getTenantDoc('inventory', inv.id || getRef('inventory').doc().id), data: { ...inv, quantity: isNaN(parseInt(inv.quantity)) ? 0 : parseInt(inv.quantity), createdAt: new Date() } }));
-                        if(json.deliveries) json.deliveries.forEach(del => ops.push({ type: 'set', ref: getTenantDoc('deliveries', del.id || getRef('deliveries').doc().id), data: { ...del, createdAt: new Date(del.createdAt) } }));
+                        if(json.companies) json.companies.forEach(comp => ops.push({ type: 'set', ref: getRef('companies').doc(comp.id || getRef('companies').doc().id), data: { ...comp, createdAt: new Date() } }));
+                        if(json.employees) json.employees.forEach(emp => ops.push({ type: 'set', ref: getRef('employees').doc(emp.id || getRef('employees').doc().id), data: { ...emp, createdAt: new Date() } }));
+                        if(json.inventory) json.inventory.forEach(inv => ops.push({ type: 'set', ref: getRef('inventory').doc(inv.id || getRef('inventory').doc().id), data: { ...inv, quantity: isNaN(parseInt(inv.quantity)) ? 0 : parseInt(inv.quantity), createdAt: new Date() } }));
+                        if(json.deliveries) json.deliveries.forEach(del => ops.push({ type: 'set', ref: getRef('deliveries').doc(del.id || getRef('deliveries').doc().id), data: { ...del, createdAt: new Date(del.createdAt) } }));
 
                         for (let i = 0; i < ops.length; i += BATCH_SIZE) {
                             const batch = db.batch();
@@ -639,14 +673,14 @@
                             alert(`${added} registos importados!`);
                             toggleModal('import', false);
                         }).catch(err => { if(err.code === 'permission-denied') setPermissionError(true); else alert("Erro: " + err.message); });
-                    } catch(err) { alert("Erro ao ler ficheiro."); }
+                    } catch(err) { alert("Erro ao ler ficheiro: " + err.message); }
                 };
                 reader.readAsArrayBuffer(file);
             };
             
             const handleDelete = async (col, id) => {
                 if(!confirm("Tem a certeza?")) return;
-                try { await getTenantDoc(col, id).delete(); } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
+                try { await getRef(col).doc(id).delete(); } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
             const handleAddCompany = async () => {
@@ -665,12 +699,16 @@
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
-            const openEditEmployeeModal = (emp) => { setEditingEmployee({...emp}); toggleModal('editEmp', true); };
+            const openEditEmployeeModal = (emp) => { 
+                const companyVal = emp.companyId || emp.company || '';
+                setEditingEmployee({...emp, companyId: companyVal}); 
+                toggleModal('editEmp', true); 
+            };
 
             const handleUpdateEmployee = async () => {
                 if(!editingEmployee.name || !editingEmployee.companyId) return alert("Nome e Empresa são obrigatórios.");
                 try {
-                    await getTenantDoc('employees', editingEmployee.id).update({
+                    await getRef('employees').doc(editingEmployee.id).update({
                         name: editingEmployee.name, role: editingEmployee.role, sector: editingEmployee.sector, companyId: editingEmployee.companyId
                     });
                     toggleModal('editEmp', false); setEditingEmployee(null);
@@ -681,7 +719,7 @@
                 if(!confirm(`Tem a certeza que deseja excluir ${selectedEmployees.length} colaborador(es)?`)) return;
                 try {
                     const batch = db.batch();
-                    selectedEmployees.forEach(id => batch.delete(getTenantDoc('employees', id)));
+                    selectedEmployees.forEach(id => batch.delete(getRef('employees').doc(id)));
                     await batch.commit(); setSelectedEmployees([]); 
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
@@ -690,7 +728,7 @@
                 if(!bulkCompanyId) return alert("Selecione a nova empresa.");
                 try {
                     const batch = db.batch();
-                    selectedEmployees.forEach(id => batch.update(getTenantDoc('employees', id), { companyId: bulkCompanyId }));
+                    selectedEmployees.forEach(id => batch.update(getRef('employees').doc(id), { companyId: bulkCompanyId }));
                     await batch.commit(); toggleModal('bulkEdit', false); setSelectedEmployees([]); setBulkCompanyId('');
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
@@ -707,7 +745,7 @@
                 const addQty = parseInt(stockToAdd.add);
                 if(isNaN(addQty) || addQty <= 0) return alert("Quantidade inválida.");
                 try {
-                    await getTenantDoc('inventory', stockToAdd.id).update({ quantity: parseInt(stockToAdd.current || 0) + addQty });
+                    await getRef('inventory').doc(stockToAdd.id).update({ quantity: parseInt(stockToAdd.current || 0) + addQty });
                     toggleModal('addStock', false);
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
@@ -745,12 +783,25 @@
                     const batch = db.batch();
 
                     deliveryCart.forEach(item => {
-                        batch.set(getRef('deliveries').doc(), {
-                            employeeId: emp.id, employeeName: emp.name, employeeRole: emp.role, employeeSector: emp.sector, employeeCompanyId: emp.companyId || null,
-                            epiId: item.id, epiName: item.name, epiCA: item.ca, quantityDelivered: item.qty,
-                            signature, status: signature ? 'signed' : 'pending', createdAt: new Date(), batchId: batchId 
+                        const ref = getRef('deliveries').doc();
+                        batch.set(ref, {
+                            employeeId: emp.id, 
+                            employeeName: emp.name, 
+                            employeeRole: emp.role, 
+                            employeeSector: emp.sector,
+                            employeeCompanyId: emp.companyId || emp.company || null,
+                            epiId: item.id, 
+                            epiName: item.name, 
+                            epiCA: item.ca, 
+                            quantityDelivered: item.qty,
+                            signature, 
+                            status: signature ? 'signed' : 'pending', 
+                            createdAt: new Date(),
+                            batchId: batchId 
                         });
-                        batch.update(getTenantDoc('inventory', item.id), { quantity: item.quantity - item.qty });
+                        const invRef = getRef('inventory').doc(item.id);
+                        const safeCurrentQty = isNaN(item.quantity) ? 0 : item.quantity;
+                        batch.update(invRef, { quantity: safeCurrentQty - item.qty });
                     });
                     
                     await batch.commit();
@@ -766,14 +817,12 @@
                     let itemsToSign = pendingDeliveryToSign.batchId ? deliveries.filter(d => d.batchId === pendingDeliveryToSign.batchId && d.status === 'pending') : [pendingDeliveryToSign];
                     
                     itemsToSign.forEach(item => {
-                        batch.update(getTenantDoc('deliveries', item.id), { signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                        batch.update(getRef('deliveries').doc(item.id), { signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
                     });
                     await batch.commit();
                     toggleModal('sign', false); setPendingDeliveryToSign(null);
                 } catch(err) { if (err.code === 'permission-denied') setPermissionError(true); }
             };
-
-            const handleLogout = () => { auth.signOut(); };
 
             const SidebarItem = ({ icon, label, id, count }) => (
                 <button onClick={() => { setView(id); setSidebarOpen(false); setSelectedEmployeeForReport(null); setReportSearch(''); }} className={`flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all mb-1 ${view === id ? 'bg-brand-700 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
@@ -786,6 +835,7 @@
             const filteredEmployees = employees.filter(e => {
                 const searchLower = employeeSearch.toLowerCase();
                 const matchesSearch = e.name.toLowerCase().includes(searchLower) || e.role.toLowerCase().includes(searchLower);
+                // Funciona para empresas dinâmicas (ID) e antigas (String "MACBOOT")
                 const matchesCompany = employeeCompanyFilter === 'TODOS' || e.companyId === employeeCompanyFilter || e.company === employeeCompanyFilter;
                 return matchesSearch && matchesCompany;
             });
@@ -794,19 +844,7 @@
             const handleSelectAllEmployees = (e) => setSelectedEmployees(e.target.checked ? filteredEmployees.map(emp => emp.id) : []);
             const handleSelectEmployee = (id) => setSelectedEmployees(selectedEmployees.includes(id) ? selectedEmployees.filter(empId => empId !== id) : [...selectedEmployees, id]);
 
-            // Agrupar entregas pendentes por batchId
-            const groupedPendingDeliveries = useMemo(() => {
-                const pending = deliveries.filter(d => d.status === 'pending');
-                const groups = {};
-                pending.forEach(d => {
-                    const key = d.batchId || d.id; 
-                    if (!groups[key]) groups[key] = { ...d, items: [], totalItems: 0 };
-                    groups[key].items.push(d); groups[key].totalItems += 1;
-                });
-                return Object.values(groups);
-            }, [deliveries]);
-
-            if(!user) return <LoginScreen />;
+            if(!user) return <LoginScreen handleLogin={handleLogin} error={authError} loading={authLoading} />;
 
             return (
                 <div className="flex h-screen overflow-hidden">
@@ -814,7 +852,7 @@
                     
                     {/* SIDEBAR */}
                     <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 flex flex-col`}>
-                        <div className="h-16 flex items-center px-6 border-b border-slate-100 font-bold text-brand-900 gap-2 shrink-0"><Icon name="ShieldCheck" size={24}/> EPI SYSTEM SaaS</div>
+                        <div className="h-16 flex items-center px-6 border-b border-slate-100 font-bold text-brand-900 gap-2 shrink-0"><Icon name="ShieldCheck" size={24}/> EPI SYSTEM</div>
                         <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
                             {isSuperAdmin ? (
                                 <>
@@ -841,8 +879,8 @@
                                 </>
                             )}
                         </nav>
-                        <div className="border-t border-slate-100 p-4 shrink-0">
-                            <div className="text-center text-xs text-slate-400 mb-2 truncate px-2">{user.email}</div>
+                        <div className="border-t border-slate-100 p-4 shrink-0 bg-white">
+                            <div className="text-center text-xs text-slate-400 mb-2 truncate px-2">{isSuperAdmin ? 'ADMIN' : user.email}</div>
                             <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-2 text-red-600 text-xs font-bold hover:bg-red-50 rounded-lg"><Icon name="LogOut"/> Sair</button>
                         </div>
                     </aside>
@@ -861,11 +899,11 @@
                                 <div className="space-y-6 max-w-5xl mx-auto">
                                     <div className="bg-brand-700 p-6 rounded-xl text-white shadow-sm">
                                         <h3 className="font-bold text-xl mb-1 flex items-center gap-2"><Icon name="Settings" size={24}/> Gestão de Clientes</h3>
-                                        <p className="text-sm text-brand-100">Controle quais usuários podem usar o sistema e importar assinaturas.</p>
+                                        <p className="text-sm text-brand-100">Controle quais usuários podem importar assinaturas e veja o uso da plataforma.</p>
                                     </div>
 
                                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                        <h4 className="font-bold text-slate-800 mb-4">Adicionar Permissão</h4>
+                                        <h4 className="font-bold text-slate-800 mb-4">Adicionar Permissão a Cliente</h4>
                                         <div className="flex flex-col md:flex-row gap-4 items-end">
                                             <div className="flex-1 w-full">
                                                 <label className="text-xs font-bold text-slate-500 uppercase">E-mail do Usuário</label>
@@ -942,7 +980,6 @@
                                 </div>
                             )}
 
-                            {/* GESTÃO DE EMPRESAS/FILIAIS */}
                             {view === 'companies' && !isSuperAdmin && (
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                                     <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -969,14 +1006,17 @@
                             )}
 
                             {view === 'employees' && !isSuperAdmin && (
-                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+                                    <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
                                         <h3 className="font-bold text-slate-800">Lista de Colaboradores</h3>
-                                        <div className="flex gap-2"><button onClick={()=>toggleModal('addEmp', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button><button onClick={()=>{setImportType('employees'); toggleModal('import', true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button></div>
+                                        <div className="flex gap-2">
+                                            <button onClick={()=>toggleModal('addEmp', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button>
+                                            <button onClick={()=>{setImportType('employees'); toggleModal('import', true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button>
+                                        </div>
                                     </div>
 
                                     {/* SEARCH AND FILTER TOOLBAR */}
-                                    <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row gap-4 justify-between">
+                                    <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row gap-4 justify-between shrink-0">
                                         <div className="flex flex-col md:flex-row gap-4 flex-1">
                                             <div className="relative flex-1 max-w-md">
                                                 <input 
@@ -1010,7 +1050,7 @@
 
                                     {/* BARRA DE AÇÕES EM LOTE */}
                                     {selectedEmployees.length > 0 && (
-                                        <div className="p-3 bg-brand-50 border-b border-brand-100 flex justify-between items-center animate-in fade-in">
+                                        <div className="p-3 bg-brand-50 border-b border-brand-100 flex justify-between items-center animate-in fade-in shrink-0">
                                             <span className="text-sm font-bold text-brand-800 px-2">{selectedEmployees.length} colaborador(es) selecionado(s)</span>
                                             <div className="flex gap-2">
                                                 <button onClick={() => toggleModal('bulkEdit', true)} className="text-xs font-bold bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors shadow-sm">Alterar Empresa</button>
@@ -1019,48 +1059,50 @@
                                         </div>
                                     )}
 
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="bg-slate-50 text-slate-500 font-medium">
-                                            <tr>
-                                                <th className="px-6 py-4 w-12 text-center">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        className="w-4 h-4 cursor-pointer accent-brand-600"
-                                                        checked={filteredEmployees.length > 0 && selectedEmployees.length === filteredEmployees.length}
-                                                        onChange={handleSelectAllEmployees}
-                                                    />
-                                                </th>
-                                                <th className="px-6 py-4">Nome</th>
-                                                <th className="px-6 py-4">Empresa</th>
-                                                <th className="px-6 py-4">Função</th>
-                                                <th className="px-6 py-4 text-right">Ações</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {filteredEmployees.map(e=>(
-                                                <tr key={e.id} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-4 text-center">
+                                    <div className="overflow-x-auto flex-1">
+                                        <table className="w-full text-left text-sm whitespace-nowrap">
+                                            <thead className="bg-slate-50 text-slate-500 font-medium sticky top-0 z-10 shadow-sm">
+                                                <tr>
+                                                    <th className="px-6 py-4 w-12 text-center">
                                                         <input 
                                                             type="checkbox" 
                                                             className="w-4 h-4 cursor-pointer accent-brand-600"
-                                                            checked={selectedEmployees.includes(e.id)}
-                                                            onChange={() => handleSelectEmployee(e.id)}
+                                                            checked={filteredEmployees.length > 0 && selectedEmployees.length === filteredEmployees.length}
+                                                            onChange={handleSelectAllEmployees}
                                                         />
-                                                    </td>
-                                                    <td className="px-6 py-4 font-medium text-slate-800">{e.name}</td>
-                                                    <td className="px-6 py-4"><span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest">{getCompanyAlias(e)}</span></td>
-                                                    <td className="px-6 py-4 text-slate-500">{e.role}</td>
-                                                    <td className="px-6 py-4 text-right flex justify-end gap-3">
-                                                        <button onClick={() => openEditEmployeeModal(e)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded transition-colors" title="Editar"><Icon name="PenLine" size={18}/></button>
-                                                        <button onClick={() => handleDelete('employees', e.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors" title="Excluir"><Icon name="Trash2" size={18}/></button>
-                                                    </td>
+                                                    </th>
+                                                    <th className="px-6 py-4">Nome</th>
+                                                    <th className="px-6 py-4">Empresa</th>
+                                                    <th className="px-6 py-4">Função</th>
+                                                    <th className="px-6 py-4 text-right">Ações</th>
                                                 </tr>
-                                            ))}
-                                            {filteredEmployees.length === 0 && (
-                                                <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-400 italic">Nenhum colaborador encontrado com os filtros atuais.</td></tr>
-                                            )}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {filteredEmployees.map(e=>(
+                                                    <tr key={e.id} className="hover:bg-slate-50 transition-colors">
+                                                        <td className="px-6 py-4 text-center">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                className="w-4 h-4 cursor-pointer accent-brand-600"
+                                                                checked={selectedEmployees.includes(e.id)}
+                                                                onChange={() => handleSelectEmployee(e.id)}
+                                                            />
+                                                        </td>
+                                                        <td className="px-6 py-4 font-medium text-slate-800">{e.name}</td>
+                                                        <td className="px-6 py-4"><span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest">{getCompanyAlias(e)}</span></td>
+                                                        <td className="px-6 py-4 text-slate-500">{e.role}</td>
+                                                        <td className="px-6 py-4 text-right flex justify-end gap-3">
+                                                            <button onClick={() => openEditEmployeeModal(e)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded transition-colors" title="Editar"><Icon name="PenLine" size={18}/></button>
+                                                            <button onClick={() => handleDelete('employees', e.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors" title="Excluir"><Icon name="Trash2" size={18}/></button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {filteredEmployees.length === 0 && (
+                                                    <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-400 italic">Nenhum colaborador encontrado com os filtros atuais.</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             )}
 
@@ -1092,7 +1134,8 @@
                                         </div>
                                     ) : (
                                         (() => {
-                                            const empComp = getCompanyDetails(selectedEmployeeForReport.companyId);
+                                            const identifier = selectedEmployeeForReport.companyId || selectedEmployeeForReport.company;
+                                            const empComp = getCompanyDetails(identifier);
                                             return (
                                                 <div className="bg-white rounded-xl shadow-lg print-content p-10">
                                                     <div className="border-b-2 border-slate-900 pb-6 mb-6">
@@ -1141,7 +1184,7 @@
                             <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Nome Completo" value={newEmployee.name} onChange={e=>setNewEmployee({...newEmployee, name:e.target.value})} />
                             <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Função" value={newEmployee.role} onChange={e=>setNewEmployee({...newEmployee, role:e.target.value})} />
                             <input className="w-full p-3 border rounded-lg outline-none focus:border-brand-500" placeholder="Setor" value={newEmployee.sector} onChange={e=>setNewEmployee({...newEmployee, sector:e.target.value})} />
-                            <button onClick={handleAddEmployee} disabled={!newEmployee.companyId || !newEmployee.name} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900 disabled:opacity-50">Salvar</button>
+                            <button onClick={handleAddEmployee} disabled={!newEmployee.companyId} className="w-full py-3 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-900 disabled:opacity-50">Salvar</button>
                         </div>
                     </Modal>
 
@@ -1151,7 +1194,7 @@
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase">Empresa Vinculada</label>
-                                    <select className="w-full p-3 border rounded-lg outline-none bg-white mt-1" value={editingEmployee.companyId || ''} onChange={e=>setEditingEmployee({...editingEmployee, companyId:e.target.value})}>
+                                    <select className="w-full p-3 border rounded-lg outline-none bg-white mt-1" value={editingEmployee.companyId || editingEmployee.company || ''} onChange={e=>setEditingEmployee({...editingEmployee, companyId:e.target.value})}>
                                         <option value="">Selecione a empresa...</option>
                                         {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
                                     </select>
@@ -1178,8 +1221,8 @@
                     {/* MODAL ALTERAR EMPRESA EM LOTE */}
                     <Modal isOpen={modals.bulkEdit} onClose={() => toggleModal('bulkEdit', false)} title="Mudar Empresa (Lote)">
                         <div className="space-y-6">
-                            <p className="text-sm font-bold text-slate-600 leading-relaxed bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                                Você está prestes a alterar a empresa de <strong className="text-blue-700">{selectedEmployees.length}</strong> colaborador(es).
+                            <p className="text-sm font-bold text-slate-600 leading-relaxed bg-brand-50 p-4 rounded-2xl border border-brand-100">
+                                Você está prestes a alterar a empresa de <strong className="text-brand-700">{selectedEmployees.length}</strong> colaborador(es).
                             </p>
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase">Nova Empresa Destino</label>
@@ -1230,7 +1273,7 @@
 
                     <Modal isOpen={modals.sign} onClose={()=>toggleModal('sign', false)} title="Assinatura" fullScreen={true}>
                         <SignaturePad 
-                            canImport={permissions.canImportSignature} 
+                            canImport={permissions.canImportSignature || isSuperAdmin} 
                             onSave={pendingDeliveryToSign ? signPendingDelivery : processDelivery} 
                             onCancel={()=>toggleModal('sign', false)} 
                         />
@@ -1239,7 +1282,15 @@
                     {modals.import && (
                         <Modal isOpen={true} onClose={() => { toggleModal('import', false); setImportText(''); }} title={`Importar ${importType === 'employees' ? 'Colaboradores' : 'Estoque'}`}>
                             <div className="space-y-4">
-                                {importType === 'employees' && <div className="mb-2"><label className="text-xs font-bold text-slate-500 uppercase">Empresa Destino</label><select className="w-full p-3 border rounded-lg bg-white mt-1" value={importCompany} onChange={e=>setImportCompany(e.target.value)}><option value="MACBOOT">MACBOOT</option><option value="PESPONTO">PESPONTO</option></select></div>}
+                                {importType === 'employees' && (
+                                    <div className="mb-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Empresa Destino</label>
+                                        <select className="w-full p-3 border rounded-lg bg-white mt-1" value={importCompany} onChange={e=>setImportCompany(e.target.value)}>
+                                            <option value="">Selecione...</option>
+                                            {companies.map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
+                                        </select>
+                                    </div>
+                                )}
                                 <p className="text-sm text-slate-500 bg-slate-50 p-3 rounded border border-slate-100">
                                     Anexe um ficheiro Excel (.xlsx) ou CSV. <br/>
                                     <strong>Ordem das colunas:</strong> {importType === 'employees' ? 'Nome, Função, Setor' : 'Nome, Complemento, CA, Quantidade'}
@@ -1247,7 +1298,7 @@
                                 <input type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleFileUpload} className="w-full p-2 border border-slate-200 rounded text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
                                 <div className="text-center text-xs text-slate-400 my-2">- OU -</div>
                                 <textarea className="w-full h-32 p-4 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Colar dados manualmente..." value={importText} onChange={e => setImportText(e.target.value)} />
-                                {importText && <button onClick={handleImport} className="w-full py-3 bg-brand-700 text-white rounded-lg font-bold text-sm hover:bg-brand-900 transition-colors">Importar Texto</button>}
+                                {importText && <button onClick={handleImport} disabled={importType === 'employees' && !importCompany} className="w-full py-3 bg-brand-700 text-white rounded-lg font-bold text-sm hover:bg-brand-900 transition-colors disabled:opacity-50">Importar Texto</button>}
                             </div>
                         </Modal>
                     )}
@@ -1256,7 +1307,7 @@
                         <div className="space-y-6">
                             <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800"><p className="font-bold mb-1">Instruções:</p><ol className="list-decimal list-inside space-y-1 ml-2"><li>Clique em "Baixar Backup" para salvar os dados atuais.</li><li>Se mudar de conta, use "Restaurar" na nova versão.</li></ol></div>
                             <button onClick={exportData} className="w-full py-3 bg-slate-800 text-white rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-slate-900 transition-colors"><Icon name="DownloadCloud" size={20} /> Baixar Backup (.json)</button>
-                            <div className="relative border-t border-slate-200 pt-4"><p className="absolute top-1 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-slate-400 font-bold">RESTAURAR</p><label className="block w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-center text-slate-500 font-bold cursor-pointer hover:border-brand-500 hover:text-brand-600 transition-all"><input type="file" accept=".json" onChange={importData} className="hidden" /><span className="flex items-center justify-center gap-2"><Icon name="Upload" size={18}/> Selecionar Arquivo de Backup</span></label></div>
+                            <div className="relative border-t border-slate-200 pt-4"><p className="absolute top-1 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-slate-400 font-bold">RESTAURAR NO MEU COFRE</p><label className="block w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-center text-slate-500 font-bold cursor-pointer hover:border-brand-500 hover:text-brand-600 transition-all"><input type="file" accept=".json" onChange={importData} className="hidden" /><span className="flex items-center justify-center gap-2"><Icon name="Upload" size={18}/> Selecionar Arquivo JSON</span></label></div>
                         </div>
                     </Modal>
 
