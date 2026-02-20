@@ -76,7 +76,7 @@
         window.onerror = function(msg, url, line, col, error) {
             document.getElementById('initial-loader').style.display = 'none';
             document.getElementById('global-error').style.display = 'block';
-            document.getElementById('error-msg').innerText = msg + "\nLinha: " + line + "\nURL: " + url;
+            document.getElementById('error-msg').innerText = msg + "\nLinha: " + line;
         };
     </script>
 
@@ -113,6 +113,7 @@
         }
         const auth = firebase.auth();
         const db = firebase.firestore();
+        // ID ORIGINAL DO APP PARA TRAZER OS DADOS DE VOLTA
         const appId = 'episystem-macboot-v1';
 
         const { useState, useEffect, useRef, useMemo } = React;
@@ -165,7 +166,7 @@
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden p-8 text-center space-y-6">
                         <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto"><Icon name="AlertTriangle" size={32} /></div>
-                        <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações ou o acesso à base de dados foi recusado pelas regras.</p></div>
+                        <div><h3 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h3><p className="text-slate-500 mt-2">O Firebase está impedindo alterações.</p></div>
                         <button onClick={onClose} className="w-full py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors uppercase text-sm">Entendi</button>
                     </div>
                 </div>
@@ -210,11 +211,11 @@
             );
         };
 
-        const Modal = ({ isOpen, onClose, title, children, fullScreen = false }) => {
+        const Modal = ({ isOpen, onClose, title, children, fullScreen = false, maxWidth = "max-w-xl" }) => {
             if (!isOpen) return null;
             return (
                 <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200 ${fullScreen ? 'p-0' : 'p-4'}`}>
-                    <div className={`bg-white shadow-2xl overflow-hidden flex flex-col ${fullScreen ? 'w-full h-full rounded-none' : 'w-full max-w-xl rounded-2xl max-h-[90vh]'}`}>
+                    <div className={`bg-white shadow-2xl overflow-hidden flex flex-col ${fullScreen ? 'w-full h-full rounded-none' : `w-full ${maxWidth} rounded-2xl max-h-[90vh]`}`}>
                         <div className="px-6 py-4 bg-brand-700 text-white flex justify-between items-center shrink-0">
                             <h4 className="font-bold text-lg flex items-center gap-2">{title}</h4>
                             <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors"><Icon name="X" size={24} /></button>
@@ -335,7 +336,7 @@
                         />
                         <div className="absolute bottom-4 right-4 text-xs font-bold text-slate-400 pointer-events-none select-none">ASSINAR AQUI</div>
                         
-                        {/* Botão de Importação (Apenas se tiver permissão) */}
+                        {/* Botão de Importação de Assinatura */}
                         {canImport && (
                             <label className="absolute top-4 right-4 bg-white border border-slate-300 text-slate-600 px-3 py-2 rounded-lg shadow-md cursor-pointer hover:bg-slate-50 flex items-center gap-2 text-xs font-bold transition-all z-10">
                                 <Icon name="Image" size={16} /> Importar Foto
@@ -404,22 +405,27 @@
             const [myPermId, setMyPermId] = useState(null);
 
             const [view, setView] = useState('dashboard');
+            
+            // Dados (Conectados à Base Partilhada Antiga)
             const [companies, setCompanies] = useState([]);
             const [employees, setEmployees] = useState([]);
             const [inventory, setInventory] = useState([]);
             const [deliveries, setDeliveries] = useState([]);
+            
             const [isSidebarOpen, setSidebarOpen] = useState(false);
             const [reportSearch, setReportSearch] = useState('');
             const [employeeSearch, setEmployeeSearch] = useState('');
             const [employeeCompanyFilter, setEmployeeCompanyFilter] = useState('TODOS');
 
-            // --- ESTADOS PARA EDIÇÃO EM MASSA E INDIVIDUAL ---
+            // Edição em Massa
             const [selectedEmployees, setSelectedEmployees] = useState([]);
             const [editingEmployee, setEditingEmployee] = useState(null);
             const [bulkCompanyId, setBulkCompanyId] = useState('');
 
-            // Modais e Formulários
-            const [modals, setModals] = useState({ import: false, addCompany: false, addEmp: false, editEmp: false, bulkEdit: false, addInv: false, addStock: false, delivery: false, sign: false, backup: false });
+            // Modais
+            const [modals, setModals] = useState({ import: false, addCompany: false, addEmp: false, editEmp: false, bulkEdit: false, addInv: false, addStock: false, delivery: false, selectEpi: false, sign: false, backup: false });
+            
+            // Dados Form
             const [importType, setImportType] = useState(null);
             const [importText, setImportText] = useState('');
             const [newCompany, setNewCompany] = useState({ alias: '', razao: '', cnpj: '' });
@@ -432,13 +438,37 @@
             const [deliveryCart, setDeliveryCart] = useState([]);
             const [pendingDeliveryToSign, setPendingDeliveryToSign] = useState(null);
             const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState(null);
+            
+            // Search no Mini Modal
+            const [epiSearch, setEpiSearch] = useState('');
+            const [miniModalEpiId, setMiniModalEpiId] = useState('');
+            const [miniModalEpiQty, setMiniModalEpiQty] = useState(1);
 
             const isSuperAdmin = user && user.email === SUPER_ADMIN_EMAIL;
 
-            // --- FUNÇÃO DE BASE DE DADOS PARA CADA UTILIZADOR (SAAS ISOLADO) ---
+            // --- DE VOLTA À RAIZ PARTILHADA ---
             const getRef = (collectionName) => {
-                return db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection(collectionName);
+                return db.collection('artifacts').doc(appId).collection(collectionName);
             };
+
+            // Helpers para Empresa Dinâmica e Antiga (Legado)
+            const getCompanyDetails = (identifier) => {
+                if (!identifier) return { alias: 'N/D', razao: 'Não Cadastrada', cnpj: '' };
+                const comp = companies.find(c => c.id === identifier || c.alias === identifier);
+                if (comp) return comp;
+                const legacyComp = CONSTANTES_EMPRESAS[identifier];
+                if (legacyComp) return { alias: identifier, razao: legacyComp.razao, cnpj: legacyComp.cnpj };
+                return { alias: identifier, razao: 'Não Cadastrada', cnpj: '' };
+            };
+
+            const getCompanyAlias = (emp) => {
+                if (!emp) return 'N/D';
+                const identifier = emp.companyId || emp.company || 'MACBOOT';
+                return getCompanyDetails(identifier).alias;
+            };
+
+            // Função toggleModal movida para escopo correto
+            const handleToggleModal = (name, val) => setModals(prev => ({...prev, [name]: val}));
 
             // Métrica do Dashboard
             const dashboardMetrics = useMemo(() => {
@@ -453,7 +483,7 @@
 
                 deliveries.forEach(d => {
                     if (d.status !== 'signed') return;
-                    const dDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
+                    const dDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(d.createdAt?.seconds ? d.createdAt.seconds*1000 : d.createdAt);
                     const qty = parseInt(d.quantityDelivered) || 1;
                     const id = d.epiId || d.epiName;
 
@@ -480,7 +510,6 @@
                 return stats;
             }, [deliveries]);
 
-            // --- AUTENTICAÇÃO ---
             useEffect(() => {
                 const unsub = auth.onAuthStateChanged(u => {
                     setUser(u);
@@ -499,49 +528,45 @@
                     await auth.signInWithEmailAndPassword(email.toLowerCase().trim(), pass);
                 } catch(e) {
                     setAuthLoading(false);
-                    setAuthError("Credenciais inválidas ou acesso não autorizado.");
+                    setAuthError("Credenciais inválidas.");
                 }
             };
 
             const handleLogout = () => { auth.signOut(); };
 
-            // Forçar Admin Panel se for o Super Admin
             useEffect(() => {
                 if (isSuperAdmin && view !== 'admin-panel') {
                     setView('admin-panel');
                 }
             }, [isSuperAdmin, view]);
 
-            // --- CARREGAR DADOS ---
+            // --- CARREGAR DADOS DA RAIZ PARTILHADA ---
             useEffect(() => {
                 if(!user || !db) return;
                 
                 const err = (e) => { 
                     console.error(e); 
-                    // Mostra o modal apenas se não for o super admin verificando a tabela normal
                     if(e.code === 'permission-denied' && !isSuperAdmin) setPermissionError(true); 
                 };
                 
                 let unPerms = () => {};
                 let un1 = () => {}, un2 = () => {}, un3 = () => {}, un4 = () => {};
 
-                // Admin carrega todas as permissões. User normal procura apenas a dele para ver se tem botão de foto.
                 if (isSuperAdmin) {
-                    unPerms = db.collection('artifacts').doc(appId).collection('permissions').onSnapshot(snap => {
+                    unPerms = getRef('permissions').onSnapshot(snap => {
                         setAdminUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
                         setPermissions({ canImportSignature: true });
                     }, err);
                 } else {
-                    unPerms = db.collection('artifacts').doc(appId).collection('permissions').where('email', '==', user.email).onSnapshot(snap => {
+                    unPerms = getRef('permissions').where('email', '==', user.email).onSnapshot(snap => {
                         if (!snap.empty) {
                             const myPerm = snap.docs[0].data();
                             setPermissions({ canImportSignature: myPerm.canImportSignature || false });
                             setMyPermId(snap.docs[0].id);
                         }
-                    }, () => {}); // Ignora silenciosamente se o firebase bloquear a leitura aqui
+                    }, () => {});
                 }
 
-                // Carregar dados de EPI isolados apenas se não for o Admin
                 if (!isSuperAdmin) {
                     un1 = getRef('employees').onSnapshot(s => setEmployees(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
                     un2 = getRef('inventory').onSnapshot(s => setInventory(s.docs.map(d=>({id:d.id, ...d.data()}))), err);
@@ -552,20 +577,19 @@
                 return () => { unPerms(); un1(); un2(); un3(); un4(); };
             }, [user, isSuperAdmin]);
 
-            // Atualiza quantidade de funcionários na tabela de permissões para o Admin ver
             useEffect(() => {
                 if (!isSuperAdmin && user && myPermId && employees.length >= 0) {
-                    db.collection('artifacts').doc(appId).collection('permissions').doc(myPermId).update({
+                    getRef('permissions').doc(myPermId).update({
                         employeeCount: employees.length
-                    }).catch(() => {}); // Ignora silenciosamente erros de permissão ao atualizar contagem
+                    }).catch(() => {}); 
                 }
             }, [employees.length, myPermId, isSuperAdmin, user]);
 
-            // --- FUNÇÕES DO PAINEL ADMIN (SÓ PARA O GABRIEL) ---
+            // --- FUNÇÕES DE ADMINISTRAÇÃO (GABRIEL) ---
             const handleAddAdminUser = async () => {
                 if (!newAdmin.email) return alert("Preencha o e-mail.");
                 try {
-                    await db.collection('artifacts').doc(appId).collection('permissions').add({
+                    await getRef('permissions').add({
                         email: newAdmin.email.toLowerCase().trim(),
                         canImportSignature: newAdmin.canImportSignature,
                         employeeCount: 0
@@ -576,34 +600,16 @@
 
             const handleDeleteAdminUser = async (id) => {
                 if(!confirm("Remover o acesso deste utilizador?")) return;
-                try { await db.collection('artifacts').doc(appId).collection('permissions').doc(id).delete(); } 
+                try { await getRef('permissions').doc(id).delete(); } 
                 catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
             const togglePermission = async (id, currentVal) => {
-                try { await db.collection('artifacts').doc(appId).collection('permissions').doc(id).update({ canImportSignature: !currentVal }); }
+                try { await getRef('permissions').doc(id).update({ canImportSignature: !currentVal }); }
                 catch(e) { console.error(e); }
             };
 
             // --- FUNÇÕES ORIGINAIS DO SISTEMA ---
-            const toggleModal = (name, val) => setModals(prev => ({...prev, [name]: val}));
-
-            const getCompanyDetails = (identifier) => {
-                if (!identifier) return { alias: 'N/D', razao: 'Não Cadastrada', cnpj: '' };
-                const comp = companies.find(c => c.id === identifier || c.alias === identifier);
-                if (comp) return comp;
-                // Fallback para os dados antigos
-                const legacyComp = CONSTANTES_EMPRESAS[identifier];
-                if (legacyComp) return { alias: identifier, razao: legacyComp.razao, cnpj: legacyComp.cnpj };
-                return { alias: identifier, razao: 'Não Cadastrada', cnpj: '' };
-            };
-
-            const getCompanyAlias = (emp) => {
-                if (!emp) return 'N/D';
-                const identifier = emp.companyId || emp.company || 'MACBOOT';
-                return getCompanyDetails(identifier).alias;
-            };
-
             const importData = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -628,7 +634,7 @@
                             await batch.commit();
                         }
                         alert("Restauração concluída no seu cofre!");
-                        toggleModal('backup', false);
+                        handleToggleModal('backup', false);
                     } catch (err) { alert("Erro: " + err.message); } 
                     finally { if(loader) loader.style.display = 'none'; e.target.value = ''; }
                 };
@@ -678,7 +684,7 @@
 
                         batch.commit().then(() => {
                             alert(`${added} registos importados!`);
-                            toggleModal('import', false);
+                            handleToggleModal('import', false);
                         }).catch(err => { if(err.code === 'permission-denied') setPermissionError(true); else alert("Erro: " + err.message); });
                     } catch(err) { alert("Erro ao ler ficheiro: " + err.message); }
                 };
@@ -694,7 +700,7 @@
                 if(!newCompany.alias || !newCompany.razao) return alert("Preencha todos os campos.");
                 try {
                     await getRef('companies').add({...newCompany, createdAt: new Date()});
-                    toggleModal('addCompany', false); setNewCompany({ alias: '', razao: '', cnpj: '' });
+                    handleToggleModal('addCompany', false); setNewCompany({ alias: '', razao: '', cnpj: '' });
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
@@ -702,14 +708,14 @@
                 if(!newEmployee.companyId || !newEmployee.name) return alert("Nome e Empresa obrigatórios.");
                 try {
                     await getRef('employees').add({...newEmployee, createdAt: new Date()});
-                    toggleModal('addEmp', false); setNewEmployee({name:'', role:'', sector:'', companyId: ''});
+                    handleToggleModal('addEmp', false); setNewEmployee({name:'', role:'', sector:'', companyId: ''});
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
             const openEditEmployeeModal = (emp) => { 
                 const companyVal = emp.companyId || emp.company || '';
                 setEditingEmployee({...emp, companyId: companyVal}); 
-                toggleModal('editEmp', true); 
+                handleToggleModal('editEmp', true); 
             };
 
             const handleUpdateEmployee = async () => {
@@ -718,7 +724,7 @@
                     await getRef('employees').doc(editingEmployee.id).update({
                         name: editingEmployee.name, role: editingEmployee.role, sector: editingEmployee.sector, companyId: editingEmployee.companyId
                     });
-                    toggleModal('editEmp', false); setEditingEmployee(null);
+                    handleToggleModal('editEmp', false); setEditingEmployee(null);
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
@@ -736,7 +742,7 @@
                 try {
                     const batch = db.batch();
                     selectedEmployees.forEach(id => batch.update(getRef('employees').doc(id), { companyId: bulkCompanyId }));
-                    await batch.commit(); toggleModal('bulkEdit', false); setSelectedEmployees([]); setBulkCompanyId('');
+                    await batch.commit(); handleToggleModal('bulkEdit', false); setSelectedEmployees([]); setBulkCompanyId('');
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
@@ -744,7 +750,7 @@
                 if(inventory.some(i => i.name === newInventory.name && i.ca === newInventory.ca)) return alert("Item já existe!");
                 try {
                     await getRef('inventory').add({...newInventory, quantity: +newInventory.quantity, createdAt: new Date()});
-                    toggleModal('addInv', false); setNewInventory({name:'', ca:'', quantity:0});
+                    handleToggleModal('addInv', false); setNewInventory({name:'', ca:'', quantity:0});
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
@@ -753,7 +759,7 @@
                 if(isNaN(addQty) || addQty <= 0) return alert("Quantidade inválida.");
                 try {
                     await getRef('inventory').doc(stockToAdd.id).update({ quantity: parseInt(stockToAdd.current || 0) + addQty });
-                    toggleModal('addStock', false);
+                    handleToggleModal('addStock', false);
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
 
@@ -770,16 +776,17 @@
                     }
                 }
                 await batch.commit();
-                setImportText(''); toggleModal('import', false); alert(`${count} registos importados!`);
+                setImportText(''); handleToggleModal('import', false); alert(`${count} registos importados!`);
             };
 
-            const addToCart = () => {
-                if(!currentEpiSelection.id) return alert("Selecione um EPI.");
-                const epi = inventory.find(i => i.id === currentEpiSelection.id);
-                if (!epi || epi.quantity < currentEpiSelection.qty) return alert("Estoque insuficiente.");
+            const handleAddEpiFromMiniModal = () => {
+                const epi = inventory.find(i => i.id === miniModalEpiId);
+                if (!epi) return alert("Selecione um EPI.");
+                if (epi.quantity < miniModalEpiQty) return alert("Estoque insuficiente.");
                 if (deliveryCart.some(i => i.id === epi.id)) return alert("Item já está na lista.");
-                setDeliveryCart([...deliveryCart, { ...epi, qty: parseInt(currentEpiSelection.qty) }]);
-                setCurrentEpiSelection({ id: '', qty: 1 });
+                
+                setDeliveryCart([...deliveryCart, { ...epi, qty: parseInt(miniModalEpiQty) }]);
+                setMiniModalEpiId(''); setMiniModalEpiQty(1); setEpiSearch(''); handleToggleModal('selectEpi', false);
             };
 
             const processDelivery = async (signature = null) => {
@@ -812,7 +819,7 @@
                     });
                     
                     await batch.commit();
-                    toggleModal('delivery', false); toggleModal('sign', false); setDeliveryCart([]); setDeliveryEmployeeId('');
+                    handleToggleModal('delivery', false); handleToggleModal('sign', false); setDeliveryCart([]); setDeliveryEmployeeId('');
                     if(signature) { setSelectedEmployeeForReport(emp); setView('reports'); } else setView('pending-signatures');
                 } catch(e) { if(e.code==='permission-denied') setPermissionError(true); }
             };
@@ -827,7 +834,7 @@
                         batch.update(getRef('deliveries').doc(item.id), { signature, status: 'signed', signedAt: firebase.firestore.FieldValue.serverTimestamp() });
                     });
                     await batch.commit();
-                    toggleModal('sign', false); setPendingDeliveryToSign(null);
+                    handleToggleModal('sign', false); setPendingDeliveryToSign(null);
                 } catch(err) { if (err.code === 'permission-denied') setPermissionError(true); }
             };
 
@@ -842,14 +849,25 @@
             const filteredEmployees = employees.filter(e => {
                 const searchLower = employeeSearch.toLowerCase();
                 const matchesSearch = e.name.toLowerCase().includes(searchLower) || e.role.toLowerCase().includes(searchLower);
-                // Funciona para empresas dinâmicas (ID) e antigas (String "MACBOOT")
+                // Permite filtrar por companhia antiga ou por ID novo
                 const matchesCompany = employeeCompanyFilter === 'TODOS' || e.companyId === employeeCompanyFilter || e.company === employeeCompanyFilter;
                 return matchesSearch && matchesCompany;
             });
 
-            // Handlers de Multi-Seleção de Colaboradores
             const handleSelectAllEmployees = (e) => setSelectedEmployees(e.target.checked ? filteredEmployees.map(emp => emp.id) : []);
             const handleSelectEmployee = (id) => setSelectedEmployees(selectedEmployees.includes(id) ? selectedEmployees.filter(empId => empId !== id) : [...selectedEmployees, id]);
+
+            // Grouping deliveries
+            const groupedPendingDeliveries = useMemo(() => {
+                const pending = deliveries.filter(d => d.status === 'pending');
+                const groups = {};
+                pending.forEach(d => {
+                    const key = d.batchId || d.id; 
+                    if (!groups[key]) groups[key] = { ...d, items: [], totalItems: 0 };
+                    groups[key].items.push(d); groups[key].totalItems += 1;
+                });
+                return Object.values(groups);
+            }, [deliveries]);
 
             if(!user) return <LoginScreen handleLogin={handleLogin} error={authError} loading={authLoading} />;
 
@@ -877,12 +895,12 @@
                                     <SidebarItem icon="Package" label="Estoque de EPIs" id="inventory" />
                                     
                                     <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-6">Operacional</p>
-                                    <button onClick={()=>toggleModal('delivery', true)} className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-brand-700 bg-brand-50 rounded-lg hover:bg-brand-100 border border-brand-100 transition-all mb-1"><Icon name="Plus" size={18} /> Nova Entrega</button>
+                                    <button onClick={()=>handleToggleModal('delivery', true)} className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-brand-700 bg-brand-50 rounded-lg hover:bg-brand-100 border border-brand-100 transition-all mb-1"><Icon name="Plus" size={18} /> Nova Entrega</button>
                                     <SidebarItem icon="Clock" label="Assinaturas" id="pending-signatures" count={deliveries.filter(d=>d.status==='pending').length} />
                                     <SidebarItem icon="FileText" label="Relatórios" id="reports" />
                                     
                                     <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-6">Sistema</p>
-                                    <button onClick={()=>toggleModal('backup', true)} className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-all mb-1"><Icon name="Database" size={18} /> Backup / Migração</button>
+                                    <button onClick={()=>handleToggleModal('backup', true)} className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-all mb-1"><Icon name="Database" size={18} /> Backup / Migração</button>
                                 </>
                             )}
                         </nav>
@@ -906,7 +924,7 @@
                                 <div className="space-y-6 max-w-5xl mx-auto">
                                     <div className="bg-brand-700 p-6 rounded-xl text-white shadow-sm">
                                         <h3 className="font-bold text-xl mb-1 flex items-center gap-2"><Icon name="Settings" size={24}/> Gestão de Clientes</h3>
-                                        <p className="text-sm text-brand-100">Controle quais usuários podem importar assinaturas e veja o uso da plataforma.</p>
+                                        <p className="text-sm text-brand-100">Controle quais usuários podem usar o sistema e importar assinaturas.</p>
                                     </div>
 
                                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -951,73 +969,36 @@
 
                             {view === 'dashboard' && !isSuperAdmin && (
                                 <div className="space-y-6">
-                                    {/* CARTÕES SUPERIORES (TOTAL GERAL) */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><p className="text-sm text-slate-500 font-bold">COLABORADORES</p><p className="text-3xl font-bold mt-2 text-slate-800">{employees.length}</p></div>
                                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><p className="text-sm text-slate-500 font-bold">ITENS EM ESTOQUE</p><p className="text-3xl font-bold mt-2 text-slate-800">{inventory.length}</p></div>
                                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><p className="text-sm text-slate-500 font-bold">ENTREGAS TOTAIS</p><p className="text-3xl font-bold mt-2 text-slate-800">{deliveries.filter(d=>d.status==='signed').length}</p></div>
                                     </div>
-
-                                    {/* CONSUMO E SAÍDAS */}
                                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                                         <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-wide text-sm"><Icon name="BarChart" size={18}/> Previsão de Consumo de EPIs</h3>
-                                        
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 flex flex-col items-center">
-                                                <span className="text-blue-600 font-bold text-xs uppercase">Hoje</span>
-                                                <span className="text-2xl font-black text-blue-900 mt-1">{dashboardMetrics.today}</span>
-                                                <span className="text-[10px] text-blue-400">unidades</span>
-                                            </div>
-                                            <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex flex-col items-center">
-                                                <span className="text-indigo-600 font-bold text-xs uppercase">Esta Semana</span>
-                                                <span className="text-2xl font-black text-indigo-900 mt-1">{dashboardMetrics.week}</span>
-                                                <span className="text-[10px] text-indigo-400">unidades</span>
-                                            </div>
-                                            <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 flex flex-col items-center">
-                                                <span className="text-purple-600 font-bold text-xs uppercase">Este Mês</span>
-                                                <span className="text-2xl font-black text-purple-900 mt-1">{dashboardMetrics.month}</span>
-                                                <span className="text-[10px] text-purple-400">unidades</span>
-                                            </div>
+                                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 flex flex-col items-center"><span className="text-blue-600 font-bold text-xs uppercase">Hoje</span><span className="text-2xl font-black text-blue-900 mt-1">{dashboardMetrics.today}</span></div>
+                                            <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex flex-col items-center"><span className="text-indigo-600 font-bold text-xs uppercase">Esta Semana</span><span className="text-2xl font-black text-indigo-900 mt-1">{dashboardMetrics.week}</span></div>
+                                            <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 flex flex-col items-center"><span className="text-purple-600 font-bold text-xs uppercase">Este Mês</span><span className="text-2xl font-black text-purple-900 mt-1">{dashboardMetrics.month}</span></div>
                                         </div>
-
                                         <div>
                                             <h4 className="text-xs font-bold text-slate-500 uppercase mb-3 border-b pb-2">Detalhamento por Item (Fluxo de Saída)</h4>
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-sm text-left">
-                                                    <thead className="bg-slate-50 text-slate-500 font-medium">
-                                                        <tr>
-                                                            <th className="py-3 px-3 rounded-l-lg">EPI</th>
-                                                            <th className="py-3 px-3">C.A.</th>
-                                                            <th className="py-3 px-3 text-center text-blue-600">Dia</th>
-                                                            <th className="py-3 px-3 text-center text-indigo-600">Semana</th>
-                                                            <th className="py-3 px-3 text-center text-purple-600 rounded-r-lg">Mês</th>
-                                                        </tr>
-                                                    </thead>
+                                                    <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="py-3 px-3 rounded-l-lg">EPI</th><th className="py-3 px-3">C.A.</th><th className="py-3 px-3 text-center text-blue-600">Dia</th><th className="py-3 px-3 text-center text-indigo-600">Semana</th><th className="py-3 px-3 text-center text-purple-600 rounded-r-lg">Mês</th></tr></thead>
                                                     <tbody className="divide-y divide-slate-100">
                                                         {dashboardMetrics.fullReport.length > 0 ? dashboardMetrics.fullReport.map((item, idx) => (
-                                                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                                <td className="py-3 px-3 font-bold text-slate-700">{item.name}</td>
-                                                                <td className="py-3 px-3 text-xs text-slate-500 font-mono">{item.ca}</td>
-                                                                <td className="py-3 px-3 text-center font-bold text-blue-900 bg-blue-50/50">{item.today > 0 ? item.today : '-'}</td>
-                                                                <td className="py-3 px-3 text-center font-bold text-indigo-900 bg-indigo-50/50">{item.week > 0 ? item.week : '-'}</td>
-                                                                <td className="py-3 px-3 text-center font-bold text-purple-900 bg-purple-50/50">{item.month > 0 ? item.month : '-'}</td>
-                                                            </tr>
-                                                        )) : (
-                                                            <tr><td colSpan="5" className="py-8 text-center text-slate-400 italic">Sem dados de consumo registados ainda.</td></tr>
-                                                        )}
+                                                            <tr key={idx} className="hover:bg-slate-50 transition-colors"><td className="py-3 px-3 font-bold text-slate-700">{item.name}</td><td className="py-3 px-3 text-xs text-slate-500 font-mono">{item.ca}</td><td className="py-3 px-3 text-center font-bold text-blue-900 bg-blue-50/50">{item.today > 0 ? item.today : '-'}</td><td className="py-3 px-3 text-center font-bold text-indigo-900 bg-indigo-50/50">{item.week > 0 ? item.week : '-'}</td><td className="py-3 px-3 text-center font-bold text-purple-900 bg-purple-50/50">{item.month > 0 ? item.month : '-'}</td></tr>
+                                                        )) : (<tr><td colSpan="5" className="py-8 text-center text-slate-400 italic">Sem dados de consumo registados ainda.</td></tr>)}
                                                     </tbody>
                                                 </table>
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* ALERTAS DE ESTOQUE */}
                                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Icon name="AlertTriangle" className="text-amber-500"/> Níveis de Estoque Crítico</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {inventory.filter(i => i.quantity < 5).map(item => (
-                                                <div key={item.id} className="p-4 bg-amber-50 border border-amber-100 rounded-lg flex justify-between items-center"><div><p className="font-bold text-slate-800">{item.name}</p><p className="text-xs text-amber-700 font-medium">CA: {item.ca}</p></div><span className="text-xl font-bold text-amber-600">{isNaN(item.quantity) ? 'Erro' : item.quantity} un</span></div>
-                                            ))}
+                                            {inventory.filter(i => i.quantity < 5).map(item => (<div key={item.id} className="p-4 bg-amber-50 border border-amber-100 rounded-lg flex justify-between items-center"><div><p className="font-bold text-slate-800">{item.name}</p><p className="text-xs text-amber-700 font-medium">CA: {item.ca}</p></div><span className="text-xl font-bold text-amber-600">{isNaN(item.quantity) ? 'Erro' : item.quantity} un</span></div>))}
                                             {inventory.filter(i => i.quantity < 5).length === 0 && <p className="text-sm text-slate-400 italic">Todos os itens com estoque adequado.</p>}
                                         </div>
                                     </div>
@@ -1029,7 +1010,7 @@
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                                     <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <h3 className="font-bold text-slate-800">Minhas Empresas / Filiais</h3>
-                                        <button onClick={()=>toggleModal('addCompany', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Cadastrar Empresa</button>
+                                        <button onClick={()=>handleToggleModal('addCompany', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Cadastrar Empresa</button>
                                     </div>
                                     <table className="w-full text-left text-sm">
                                         <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Nome Fantasia (Apelido)</th><th className="px-6 py-4">Razão Social</th><th className="px-6 py-4">CNPJ</th><th className="px-6 py-4 text-right">Ações</th></tr></thead>
@@ -1055,8 +1036,8 @@
                                     <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
                                         <h3 className="font-bold text-slate-800">Lista de Colaboradores</h3>
                                         <div className="flex gap-2">
-                                            <button onClick={()=>toggleModal('addEmp', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button>
-                                            <button onClick={()=>{setImportType('employees'); toggleModal('import', true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button>
+                                            <button onClick={()=>handleToggleModal('addEmp', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo</button>
+                                            <button onClick={()=>{setImportType('employees'); handleToggleModal('import', true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button>
                                         </div>
                                     </div>
 
@@ -1098,7 +1079,7 @@
                                         <div className="p-3 bg-brand-50 border-b border-brand-100 flex justify-between items-center animate-in fade-in shrink-0">
                                             <span className="text-sm font-bold text-brand-800 px-2">{selectedEmployees.length} colaborador(es) selecionado(s)</span>
                                             <div className="flex gap-2">
-                                                <button onClick={() => toggleModal('bulkEdit', true)} className="text-xs font-bold bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors shadow-sm">Alterar Empresa</button>
+                                                <button onClick={() => handleToggleModal('bulkEdit', true)} className="text-xs font-bold bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors shadow-sm">Alterar Empresa</button>
                                                 <button onClick={handleBulkDelete} className="text-xs font-bold bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors shadow-sm">Excluir</button>
                                             </div>
                                         </div>
@@ -1153,8 +1134,8 @@
 
                             {view === 'inventory' && !isSuperAdmin && (
                                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b border-slate-100 flex justify-between"><h3 className="font-bold text-slate-800">Controle de Estoque</h3><div className="flex gap-2"><button onClick={()=>toggleModal('addInv', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo Item</button><button onClick={()=>{setImportType('inventory'); toggleModal('import', true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button></div></div>
-                                    <table className="w-full text-left text-sm"><thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Item</th><th className="px-6 py-4">CA</th><th className="px-6 py-4 text-center">Qtd</th><th className="px-6 py-4 text-right">Ações</th></tr></thead><tbody className="divide-y divide-slate-100">{inventory.map(i=><tr key={i.id} className="hover:bg-slate-50"><td className="px-6 py-4 font-medium">{i.name}</td><td className="px-6 py-4 text-slate-500">{i.ca}</td><td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-bold ${i.quantity<5?'bg-red-100 text-red-700':'bg-emerald-100 text-emerald-700'}`}>{isNaN(i.quantity) ? 0 : i.quantity}</span></td><td className="px-6 py-4 text-right flex justify-end gap-2"><button onClick={()=>{setStockToAdd({id:i.id, curr:isNaN(i.quantity)?0:i.quantity, add:''}); toggleModal('addStock', true)}} className="text-brand-600 hover:bg-brand-50 p-1 rounded"><Icon name="Plus"/></button><button onClick={()=>handleDelete('inventory', i.id)} className="text-red-400 hover:bg-red-50 p-1 rounded"><Icon name="Trash2"/></button></td></tr>)}</tbody></table>
+                                    <div className="p-6 border-b border-slate-100 flex justify-between"><h3 className="font-bold text-slate-800">Controle de Estoque</h3><div className="flex gap-2"><button onClick={()=>handleToggleModal('addInv', true)} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-brand-800"><Icon name="Plus"/> Novo Item</button><button onClick={()=>{setImportType('inventory'); handleToggleModal('import', true)}} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"><Icon name="Upload"/> Importar</button></div></div>
+                                    <table className="w-full text-left text-sm"><thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Item</th><th className="px-6 py-4">CA</th><th className="px-6 py-4 text-center">Qtd</th><th className="px-6 py-4 text-right">Ações</th></tr></thead><tbody className="divide-y divide-slate-100">{inventory.map(i=><tr key={i.id} className="hover:bg-slate-50"><td className="px-6 py-4 font-medium">{i.name}</td><td className="px-6 py-4 text-slate-500">{i.ca}</td><td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-bold ${i.quantity<5?'bg-red-100 text-red-700':'bg-emerald-100 text-emerald-700'}`}>{isNaN(i.quantity) ? 0 : i.quantity}</span></td><td className="px-6 py-4 text-right flex justify-end gap-2"><button onClick={()=>{setStockToAdd({id:i.id, curr:isNaN(i.quantity)?0:i.quantity, add:''}); handleToggleModal('addStock', true)}} className="text-brand-600 hover:bg-brand-50 p-1 rounded"><Icon name="Plus"/></button><button onClick={()=>handleDelete('inventory', i.id)} className="text-red-400 hover:bg-red-50 p-1 rounded"><Icon name="Trash2"/></button></td></tr>)}</tbody></table>
                                 </div>
                             )}
                             
@@ -1169,7 +1150,7 @@
                                                 </p>
                                                 <p className="text-xs text-slate-400 mt-2">{del.createdAt?.toDate ? del.createdAt.toDate().toLocaleString('pt-BR') : new Date(del.createdAt?.seconds ? del.createdAt.seconds*1000 : del.createdAt).toLocaleString('pt-BR')}</p>
                                             </div>
-                                            <button onClick={()=>{setPendingDeliveryToSign(del); toggleModal('sign', true)}} className="mt-auto w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-brand-700 transition-colors">Coletar Assinatura</button>
+                                            <button onClick={()=>{setPendingDeliveryToSign(del); handleToggleModal('sign', true)}} className="mt-auto w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-brand-700 transition-colors">Coletar Assinatura</button>
                                         </div>
                                     ))}
                                     {groupedPendingDeliveries.length === 0 && <p className="col-span-full text-center text-slate-400 py-10">Nenhuma pendência.</p>}
@@ -1284,7 +1265,7 @@
                     </main>
 
                     {/* MODAIS */}
-                    <Modal isOpen={modals.addCompany} onClose={() => toggleModal('addCompany', false)} title="Registar Nova Empresa">
+                    <Modal isOpen={modals.addCompany} onClose={() => handleToggleModal('addCompany', false)} title="Registar Nova Empresa">
                         <div className="space-y-5">
                             <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Nome Curto (Apelido)</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Ex: Filial Norte" value={newCompany.alias} onChange={e=>setNewCompany({...newCompany, alias:e.target.value})} /></div>
                             <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Razão Social Oficial</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Empresa XYZ LTDA" value={newCompany.razao} onChange={e=>setNewCompany({...newCompany, razao:e.target.value})} /></div>
@@ -1293,7 +1274,7 @@
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.addEmp} onClose={() => toggleModal('addEmp', false)} title="Registar Colaborador">
+                    <Modal isOpen={modals.addEmp} onClose={() => handleToggleModal('addEmp', false)} title="Registar Colaborador">
                         <div className="space-y-5">
                             <div>
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Vincular a qual empresa?</label>
@@ -1312,7 +1293,7 @@
                     </Modal>
 
                     {/* MODAL EDITAR COLABORADOR */}
-                    <Modal isOpen={modals.editEmp} onClose={() => { toggleModal('editEmp', false); setEditingEmployee(null); }} title="Editar Colaborador">
+                    <Modal isOpen={modals.editEmp} onClose={() => { handleToggleModal('editEmp', false); setEditingEmployee(null); }} title="Editar Colaborador">
                         {editingEmployee && (
                             <div className="space-y-4">
                                 <div>
@@ -1342,7 +1323,7 @@
                     </Modal>
 
                     {/* MODAL ALTERAR EMPRESA EM LOTE */}
-                    <Modal isOpen={modals.bulkEdit} onClose={() => toggleModal('bulkEdit', false)} title="Mudar Empresa (Lote)">
+                    <Modal isOpen={modals.bulkEdit} onClose={() => handleToggleModal('bulkEdit', false)} title="Mudar Empresa (Lote)">
                         <div className="space-y-6">
                             <p className="text-sm font-bold text-slate-600 leading-relaxed bg-brand-50 p-4 rounded-2xl border border-brand-100">
                                 Você está prestes a alterar a empresa de <strong className="text-brand-700">{selectedEmployees.length}</strong> colaborador(es).
@@ -1358,7 +1339,7 @@
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.addInv} onClose={() => toggleModal('addInv', false)} title="Registar Equipamento">
+                    <Modal isOpen={modals.addInv} onClose={() => handleToggleModal('addInv', false)} title="Registar Equipamento">
                         <div className="space-y-5">
                             <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Nome do Equipamento</label><input className="w-full p-4 mt-1 border-2 border-slate-100 rounded-2xl outline-none focus:border-brand-500 font-bold" placeholder="Luva de Raspa" value={newInventory.name} onChange={e=>setNewInventory({...newInventory, name:e.target.value})} /></div>
                             <div className="grid grid-cols-2 gap-4">
@@ -1369,7 +1350,7 @@
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.addStock} onClose={()=>toggleModal('addStock', false)} title="Reforçar Stock" maxWidth="max-w-md">
+                    <Modal isOpen={modals.addStock} onClose={()=>handleToggleModal('addStock', false)} title="Reforçar Stock" maxWidth="max-w-md">
                         <div className="space-y-6 text-center">
                             <p className="text-slate-500 font-bold">Saldo Atual: <span className="text-2xl font-black text-slate-800">{isNaN(stockToAdd.current) ? 0 : stockToAdd.current} un</span></p>
                             <div>
@@ -1381,25 +1362,29 @@
                     </Modal>
 
                     {/* MODAL NOVA ENTREGA */}
-                    <Modal isOpen={modals.delivery} onClose={() => { toggleModal('delivery', false); setDeliveryCart([]); setDeliveryEmployeeId(''); }} title="Processar Entrega">
+                    <Modal isOpen={modals.delivery} onClose={() => { handleToggleModal('delivery', false); setDeliveryCart([]); setDeliveryEmployeeId(''); }} title="Processar Entrega">
                         <div className="space-y-8">
                             <div>
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-2">Selecione o Colaborador</label>
-                                <select disabled={deliveryCart.length > 0} className="w-full p-5 border-2 rounded-2xl bg-slate-50 font-black text-lg outline-none focus:border-brand-500 border-slate-100 transition-all text-slate-700" value={deliveryEmployeeId} onChange={e => setDeliveryEmployeeId(e.target.value)}>
-                                <option value="">Buscar na lista...</option>
-                                {employees.map(e => <option key={e.id} value={e.id}>{e.name} — {getCompanyDetails(e.companyId).alias}</option>)}
-                                </select>
+                                <SearchableSelect 
+                                    options={employees.map(e => ({
+                                        value: e.id, 
+                                        label: `${e.name} — ${getCompanyAlias(e)}`, 
+                                        main: e.name, 
+                                        sub: `${getCompanyAlias(e)} • ${e.role}`
+                                    }))} 
+                                    value={deliveryEmployeeId} 
+                                    onChange={setDeliveryEmployeeId} 
+                                    placeholder="Buscar colaborador..." 
+                                    disabled={deliveryCart.length > 0} 
+                                />
                             </div>
                             
-                            <div className="bg-brand-50 p-6 sm:p-8 rounded-[32px] border-2 border-dashed border-brand-200">
-                                <h4 className="font-black text-brand-900 mb-4 uppercase text-xs tracking-widest flex items-center gap-2"><Icon name="ShoppingCart" size={16}/> Adicionar ao Lote</h4>
-                                <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="flex-1">
-                                    <SearchableSelect options={inventory.filter(i=>i.quantity>0).map(i=>({value:i.id, label:i.name, main:i.name, sub:`CA: ${i.ca} (${i.quantity})`}))} value={currentEpiSelection.id} onChange={v=>setCurrentEpiSelection(p=>({...p, id:v}))} placeholder="EPI..." />
-                                </div>
-                                <input type="number" min="1" className="w-full sm:w-24 p-4 border-2 rounded-2xl bg-white font-black border-slate-100 outline-none focus:border-brand-500 text-center text-brand-600" placeholder="Qtd" value={currentEpiSelection.qty} onChange={e => setCurrentEpiSelection(p=>({...p, qty:e.target.value}))} />
-                                <button disabled={!currentEpiSelection.id || !deliveryEmployeeId} onClick={addToCart} className="w-full sm:w-auto bg-brand-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg shadow-brand-200 active:scale-95 disabled:opacity-30 transition-all uppercase tracking-widest text-xs flex items-center justify-center"><Icon name="Plus" size={20}/></button>
-                                </div>
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2"><Icon name="Package" size={16}/> Equipamentos</h4>
+                                <button onClick={() => handleToggleModal('selectEpi', true)} disabled={!deliveryEmployeeId} className="w-full py-3 bg-white border-2 border-dashed border-brand-300 text-brand-700 font-bold rounded-lg hover:bg-brand-50 flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
+                                    <Icon name="Search" size={18}/> Localizar e Adicionar EPI
+                                </button>
                             </div>
 
                             {deliveryCart.length > 0 && (
@@ -1417,14 +1402,44 @@
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <button onClick={() => processDelivery(null)} className="bg-slate-100 text-slate-600 py-5 rounded-2xl font-black hover:bg-slate-200 active:scale-95 transition-all uppercase tracking-widest text-sm">Validar Depois</button>
-                                    <button onClick={() => toggleModal('sign', true)} className="bg-emerald-500 text-white py-5 rounded-2xl font-black shadow-xl shadow-emerald-200 hover:bg-emerald-600 active:scale-95 transition-all uppercase tracking-widest text-sm flex justify-center items-center gap-2"><Icon name="PenLine" size={18}/> Assinar Agora</button>
+                                    <button onClick={() => handleToggleModal('sign', true)} className="bg-emerald-500 text-white py-5 rounded-2xl font-black shadow-xl shadow-emerald-200 hover:bg-emerald-600 active:scale-95 transition-all uppercase tracking-widest text-sm flex justify-center items-center gap-2"><Icon name="PenLine" size={18}/> Assinar Agora</button>
                                 </div>
                                 </div>
                             )}
                         </div>
                     </Modal>
 
-                    <Modal isOpen={modals.sign} onClose={()=>toggleModal('sign', false)} title="Recolha de Assinatura" fullScreen={true}>
+                    {/* MINI MODAL SELEÇÃO DE EPI */}
+                    <Modal isOpen={modals.selectEpi} onClose={() => { handleToggleModal('selectEpi', false); setMiniModalEpiId(''); setMiniModalEpiQty(1); setEpiSearch(''); }} title="Selecionar EPI" maxWidth="max-w-lg">
+                        <div className="space-y-4">
+                            <div className="relative">
+                                <input type="text" placeholder="Buscar EPI por nome ou CA..." className="w-full p-3 pl-10 border rounded-lg outline-none focus:border-brand-500" value={epiSearch} onChange={e=>setEpiSearch(e.target.value)}/>
+                                <Icon name="Search" className="absolute left-3 top-3 text-slate-400" size={18}/>
+                            </div>
+                            <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
+                                {inventory.filter(i => i.quantity > 0 && (i.name.toLowerCase().includes(epiSearch.toLowerCase()) || String(i.ca).includes(epiSearch))).map(i => (
+                                    <div key={i.id} onClick={() => setMiniModalEpiId(i.id)} className={`p-3 cursor-pointer transition-colors ${miniModalEpiId === i.id ? 'bg-brand-50 border-l-4 border-brand-600' : 'hover:bg-slate-50'}`}>
+                                        <p className="font-bold text-slate-800 text-sm">{i.name}</p>
+                                        <p className="text-xs text-slate-500">CA: {i.ca} • Saldo: <span className="font-bold">{i.quantity}</span></p>
+                                    </div>
+                                ))}
+                                {inventory.filter(i => i.quantity > 0 && (i.name.toLowerCase().includes(epiSearch.toLowerCase()) || String(i.ca).includes(epiSearch))).length === 0 && (
+                                    <div className="p-4 text-center text-slate-400 text-sm italic">Nenhum equipamento encontrado.</div>
+                                )}
+                            </div>
+                            {miniModalEpiId && (
+                                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 flex items-end gap-3 animate-in fade-in">
+                                    <div className="flex-1">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase">Quantidade</label>
+                                        <input type="number" min="1" className="w-full p-3 border rounded-lg outline-none focus:border-brand-500 text-center font-bold" value={miniModalEpiQty} onChange={e=>setMiniModalEpiQty(e.target.value)}/>
+                                    </div>
+                                    <button onClick={handleAddEpiFromMiniModal} className="flex-1 py-3 bg-brand-700 text-white font-bold rounded-lg shadow hover:bg-brand-800 transition-colors">Adicionar</button>
+                                </div>
+                            )}
+                        </div>
+                    </Modal>
+
+                    <Modal isOpen={modals.sign} onClose={()=>handleToggleModal('sign', false)} title="Recolha de Assinatura" fullScreen={true}>
                         <div className="flex flex-col h-full items-center p-4">
                             <div className="w-full max-w-2xl bg-white shadow-sm rounded-2xl overflow-hidden flex flex-col h-[70vh] border border-slate-200 mt-8">
                                 <div className="p-6 text-center border-b border-slate-100 bg-slate-50">
@@ -1435,7 +1450,7 @@
                                     <SignaturePad 
                                         canImport={permissions.canImportSignature || isSuperAdmin} 
                                         onSave={pendingDeliveryToSign ? signPendingDelivery : processDelivery} 
-                                        onCancel={()=>toggleModal('sign', false)} 
+                                        onCancel={()=>handleToggleModal('sign', false)} 
                                     />
                                 </div>
                             </div>
@@ -1443,7 +1458,7 @@
                     </Modal>
 
                     {modals.import && (
-                        <Modal isOpen={true} onClose={() => { toggleModal('import', false); setImportText(''); }} title={`Importar ${importType === 'employees' ? 'Colaboradores' : 'Estoque'}`}>
+                        <Modal isOpen={true} onClose={() => { handleToggleModal('import', false); setImportText(''); }} title={`Importar ${importType === 'employees' ? 'Colaboradores' : 'Estoque'}`}>
                             <div className="space-y-4">
                                 {importType === 'employees' && (
                                     <div className="mb-2">
@@ -1466,11 +1481,11 @@
                         </Modal>
                     )}
                     
-                    <Modal isOpen={modals.backup} onClose={() => toggleModal('backup', false)} title="Backup e Migração">
+                    <Modal isOpen={modals.backup} onClose={() => handleToggleModal('backup', false)} title="Backup e Migração">
                         <div className="space-y-6">
-                            <div className="bg-blue-50 p-6 rounded-[32px] border border-blue-100 text-sm font-bold text-blue-800"><p className="font-black mb-2 uppercase tracking-widest text-xs text-blue-600">Instruções:</p><ol className="list-decimal list-inside space-y-2"><li>Clique em "Baixar Backup" para salvar os dados atuais do seu cofre.</li><li>A versão SaaS carrega dados isolados de forma segura por conta de e-mail.</li></ol></div>
+                            <div className="bg-blue-50 p-6 rounded-[32px] border border-blue-100 text-sm font-bold text-blue-800"><p className="font-black mb-2 uppercase tracking-widest text-xs text-blue-600">Instruções:</p><ol className="list-decimal list-inside space-y-2"><li>Clique em "Baixar Backup" para salvar os dados atuais da base partilhada.</li><li>Pode usar este ficheiro JSON mais tarde para migrar os dados para contas isoladas.</li></ol></div>
                             <button onClick={exportData} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-lg active:scale-95 uppercase tracking-widest text-sm"><Icon name="DownloadCloud" size={20} /> Baixar Backup (.json)</button>
-                            <div className="relative border-t-2 border-dashed border-slate-200 pt-6 mt-4"><p className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-4 text-[10px] text-slate-400 font-black uppercase tracking-widest">RESTAURAR NO MEU COFRE</p><label className="flex w-full py-5 bg-white border-2 border-slate-100 rounded-2xl text-center font-black text-slate-500 cursor-pointer hover:border-brand-500 hover:text-brand-600 transition-all justify-center items-center shadow-sm"><input type="file" accept=".json" onChange={importData} className="hidden" /><span className="flex items-center justify-center gap-3 uppercase tracking-widest text-sm"><Icon name="Upload" size={20}/> Selecionar Arquivo JSON</span></label></div>
+                            <div className="relative border-t-2 border-dashed border-slate-200 pt-6 mt-4"><p className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-4 text-[10px] text-slate-400 font-black uppercase tracking-widest">RESTAURAR DA NUVEM</p><label className="flex w-full py-5 bg-white border-2 border-slate-100 rounded-2xl text-center font-black text-slate-500 cursor-pointer hover:border-brand-500 hover:text-brand-600 transition-all justify-center items-center shadow-sm"><input type="file" accept=".json" onChange={importData} className="hidden" /><span className="flex items-center justify-center gap-3 uppercase tracking-widest text-sm"><Icon name="Upload" size={20}/> Selecionar Arquivo JSON</span></label></div>
                         </div>
                     </Modal>
 
