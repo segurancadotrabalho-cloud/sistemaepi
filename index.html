@@ -232,14 +232,34 @@
             const [capturedSelfie, setCapturedSelfie] = useState(null);
 
             useEffect(() => {
+                let lastWidth = 0;
                 const resize = () => {
                     const c = canvasRef.current;
                     if(!c) return;
                     const r = c.parentElement.getBoundingClientRect();
+                    
+                    // Evita limpar o canvas no mobile quando a tela rola (a barra de endereço muda a altura, mas a largura fica igual)
+                    if (lastWidth === r.width) return;
+                    
+                    // Guarda o desenho atual num canvas temporário antes de redimensionar
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = c.width || 0;
+                    tempCanvas.height = c.height || 0;
+                    if (c.width > 0 && c.height > 0) {
+                        tempCanvas.getContext('2d').drawImage(c, 0, 0);
+                    }
+
                     c.width = r.width;
                     c.height = r.height;
+                    lastWidth = r.width;
+                    
                     const ctx = c.getContext('2d');
                     ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
+
+                    // Restaura o desenho
+                    if (tempCanvas.width > 0) {
+                        ctx.drawImage(tempCanvas, 0, 0);
+                    }
                 };
                 setTimeout(resize, 100);
                 window.addEventListener('resize', resize);
