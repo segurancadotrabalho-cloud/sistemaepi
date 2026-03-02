@@ -58,6 +58,19 @@
         .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         #global-error { display: none; position: fixed; inset: 0; background: #fef2f2; z-index: 10000; padding: 2rem; color: #991b1b; font-family: monospace; overflow: auto; }
+        
+        /* Nova classe para o contentor do PDF invisível mas renderizável */
+        .pdf-render-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 210mm; /* Largura A4 padrão */
+            background-color: white;
+            z-index: 9998; /* Imediatamente atrás do overlay de loading */
+            pointer-events: none; /* Não interativo */
+            /* opacity: 0.01; Essencial: quase invisível, mas o browser é obrigado a pintá-lo */
+            visibility: hidden; /* Vamos tentar visibility e z-index primeiro */
+        }
     </style>
 </head>
 <body class="bg-brand-50 text-slate-800">
@@ -619,18 +632,18 @@
                 if(!window.confirm(`Serão gerados ${employeesWithDeliveries.length} relatórios individuais em PDF. Isso pode demorar alguns instantes. Deseja continuar?`)) return;
 
                 setIsGeneratingZip(true);
-                setZipProgress({ current: 0, total: employeesWithDeliveries.length, currentName: 'A preparar ficheiros...' });
+                setZipProgress({ current: 0, total: employeesWithDeliveries.length, currentName: 'A preparar ambiente...' });
 
                 try {
                     const zip = new window.JSZip();
                     
+                    // Container com CSS otimizado para não ser ignorado pelo html2canvas
                     const hiddenContainer = document.createElement('div');
-                    hiddenContainer.style.position = 'absolute';
-                    hiddenContainer.style.top = '0';
-                    hiddenContainer.style.left = '0';
-                    hiddenContainer.style.width = '210mm'; 
-                    hiddenContainer.style.backgroundColor = 'white';
-                    hiddenContainer.style.zIndex = '1';
+                    hiddenContainer.className = 'pdf-render-container';
+                    hiddenContainer.id = 'temp-pdf-render-container';
+                    // Tornamos visível momentaneamente durante o processamento, 
+                    // mas protegido pelo z-index abaixo do modal
+                    hiddenContainer.style.visibility = 'visible'; 
                     document.body.appendChild(hiddenContainer);
 
                     let count = 0;
@@ -641,9 +654,8 @@
                         const empComp = getCompanyDetails(emp.companyId || emp.company);
                         const hasAnySelfie = empDeliveries.some(d => d.selfie);
 
-                        // Estrutura HTML exata idêntica à ficha visualizada no ecrã
                         hiddenContainer.innerHTML = `
-                            <div class="p-10 bg-white">
+                            <div class="p-10 bg-white" id="pdf-content-wrapper">
                                 <div class="border-b-2 border-slate-900 pb-6 mb-6 flex justify-between items-start gap-6">
                                     <div>
                                         <h1 class="text-2xl font-black text-slate-900 mb-1 uppercase tracking-tighter">FICHA DE EPI</h1>
@@ -670,31 +682,31 @@
                                     <strong>TERMO DE RESPONSABILIDADE:</strong> Declaro ter recebido os Equipamentos de Proteção Individual listados abaixo em perfeito estado de conservação e funcionamento. Assumo o compromisso de os utilizar obrigatoriamente durante toda a minha jornada de trabalho, zelar pela sua guarda e conservação, e comunicar imediatamente a minha chefia sobre qualquer alteração que os torne impróprios para uso, estando ciente das penalidades previstas na lei e nas normas de Segurança do Trabalho.
                                 </div>
 
-                                <table class="w-full border-collapse">
+                                <table class="w-full border-collapse" style="table-layout: fixed;">
                                     <thead>
                                         <tr class="bg-slate-100">
-                                            <th class="border-y-4 border-black p-4 text-left font-black text-xs uppercase tracking-widest">Data</th>
-                                            <th class="border-y-4 border-black p-4 text-left font-black text-xs uppercase tracking-widest">Descrição do Equipamento</th>
-                                            <th class="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest">CA. Reg.</th>
-                                            <th class="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest">Qtd</th>
-                                            <th class="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest">Assinatura Digital</th>
-                                            ${hasAnySelfie ? `<th class="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest">Biometria Facial</th>` : ''}
+                                            <th class="border-y-4 border-black p-4 text-left font-black text-xs uppercase tracking-widest" style="width: 15%">Data</th>
+                                            <th class="border-y-4 border-black p-4 text-left font-black text-xs uppercase tracking-widest" style="width: 35%">Descrição do Equipamento</th>
+                                            <th class="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest" style="width: 15%">CA. Reg.</th>
+                                            <th class="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest" style="width: 10%">Qtd</th>
+                                            <th class="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest" style="width: 25%">Assinatura Digital</th>
+                                            ${hasAnySelfie ? `<th class="border-y-4 border-black p-4 text-center font-black text-xs uppercase tracking-widest" style="width: 15%">Validação</th>` : ''}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         ${empDeliveries.map((del, i) => `
-                                            <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}">
+                                            <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}">
                                                 <td class="border-b border-slate-200 p-4 font-black text-sm">${renderDateOnly(del.createdAt)}</td>
-                                                <td class="border-b border-slate-200 p-4 font-black text-slate-800 text-lg uppercase tracking-tight">${del.epiName}</td>
+                                                <td class="border-b border-slate-200 p-4 font-black text-slate-800 text-sm uppercase tracking-tight break-words">${del.epiName}</td>
                                                 <td class="border-b border-slate-200 p-4 text-center font-mono font-bold text-slate-500">${del.epiCA}</td>
                                                 <td class="border-b border-slate-200 p-4 text-center font-black text-lg">${del.quantityDelivered}</td>
                                                 <td class="border-b border-slate-200 p-4 text-center align-middle">
-                                                    <img src="${del.signature}" class="h-14 w-32 object-contain filter contrast-125 mix-blend-multiply mx-auto block" alt="Assinatura" />
+                                                    <img src="${del.signature}" style="max-height: 40px; max-width: 100px; display: block; margin: 0 auto; filter: contrast(1.2) grayscale(1);" alt="Assinatura" />
                                                 </td>
                                                 ${hasAnySelfie ? `
                                                     <td class="border-b border-slate-200 p-4 text-center align-middle">
                                                         ${del.selfie 
-                                                            ? `<img src="${del.selfie}" class="h-14 w-14 object-cover rounded-lg mx-auto shadow-sm block" alt="Foto Validação" />` 
+                                                            ? `<img src="${del.selfie}" style="max-height: 40px; max-width: 40px; object-fit: cover; border-radius: 4px; display: block; margin: 0 auto;" alt="Foto Validação" />` 
                                                             : `<span class="text-slate-300 text-xs italic">-</span>`
                                                         }
                                                     </td>
@@ -709,20 +721,25 @@
                             </div>
                         `;
 
-                        await new Promise(resolve => setTimeout(resolve, 300)); 
+                        // Pausa generosa para garantir que o browser pinta o DOM e as imagens Base64 carregam
+                        await new Promise(resolve => setTimeout(resolve, 600)); 
 
-                        const opt = {
-                            margin:       10,
-                            filename:     `Ficha_EPI_${emp.name.replace(/\s+/g, '_')}.pdf`,
-                            image:        { type: 'jpeg', quality: 0.98 },
-                            html2canvas:  { scale: 2, useCORS: true },
-                            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                        };
+                        // Usar o container interno como target para garantir que html2canvas tem um elemento contido
+                        const targetElement = hiddenContainer.querySelector('#pdf-content-wrapper');
 
-                        const pdfBlob = await window.html2pdf().set(opt).from(hiddenContainer).output('blob');
-                        zip.file(`Ficha_EPI_${emp.name.replace(/[^a-zA-Z0-9À-ú]/g, '_')}.pdf`, pdfBlob);
+                        if (targetElement) {
+                            const opt = {
+                                margin:       10,
+                                filename:     `Ficha_EPI_${emp.name.replace(/\s+/g, '_')}.pdf`,
+                                image:        { type: 'jpeg', quality: 0.98 },
+                                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                            };
 
-                        count++;
+                            const pdfBlob = await window.html2pdf().set(opt).from(targetElement).output('blob');
+                            zip.file(`Ficha_EPI_${emp.name.replace(/[^a-zA-Z0-9À-ú]/g, '_')}.pdf`, pdfBlob);
+                            count++;
+                        }
                     }
 
                     document.body.removeChild(hiddenContainer);
@@ -742,8 +759,8 @@
                 } catch (err) {
                     console.error(err);
                     alert("Erro ao gerar ficheiros: " + err.message);
-                    const strayContainers = document.querySelectorAll('div[style*="z-index: 1"]');
-                    strayContainers.forEach(c => c.remove());
+                    const strayContainer = document.getElementById('temp-pdf-render-container');
+                    if (strayContainer) strayContainer.remove();
                 } finally {
                     setIsGeneratingZip(false);
                 }
