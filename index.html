@@ -625,11 +625,13 @@
                     const zip = new window.JSZip();
                     
                     const hiddenContainer = document.createElement('div');
+                    // Correção: Colocar no topo, mas escondido atrás da interface atual para o html2canvas conseguir ler
                     hiddenContainer.style.position = 'absolute';
-                    hiddenContainer.style.top = '-9999px';
-                    hiddenContainer.style.left = '-9999px';
+                    hiddenContainer.style.top = '0';
+                    hiddenContainer.style.left = '0';
                     hiddenContainer.style.width = '210mm'; 
                     hiddenContainer.style.backgroundColor = 'white';
+                    hiddenContainer.style.zIndex = '-9999';
                     document.body.appendChild(hiddenContainer);
 
                     let count = 0;
@@ -708,6 +710,9 @@
                             </div>
                         `;
 
+                        // Correção vital: Dar tempo ao navegador para renderizar a tabela e desenhar as imagens base64
+                        await new Promise(resolve => setTimeout(resolve, 300)); 
+
                         const opt = {
                             margin:       10,
                             filename:     `Ficha_EPI_${emp.name.replace(/\s+/g, '_')}.pdf`,
@@ -716,12 +721,11 @@
                             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
                         };
 
-                        const pdfOutput = await window.html2pdf().set(opt).from(hiddenContainer).output('arraybuffer');
-                        zip.file(`Ficha_EPI_${emp.name.replace(/[^a-zA-Z0-9À-ú]/g, '_')}.pdf`, pdfOutput);
+                        // Garantir a saída em blob binário nativo e compatível com JSZip
+                        const pdfBlob = await window.html2pdf().set(opt).from(hiddenContainer).output('blob');
+                        zip.file(`Ficha_EPI_${emp.name.replace(/[^a-zA-Z0-9À-ú]/g, '_')}.pdf`, pdfBlob);
 
                         count++;
-                        // Pausa muito breve para permitir que o navegador atualize a UI (a barra de progresso)
-                        await new Promise(resolve => setTimeout(resolve, 50)); 
                     }
 
                     document.body.removeChild(hiddenContainer);
@@ -741,6 +745,11 @@
                 } catch (err) {
                     console.error(err);
                     alert("Erro ao gerar ficheiros: " + err.message);
+                    if (document.getElementById('ficha-epi-content') === null) {
+                        // Limpeza em caso de falha a meio
+                        const strayContainers = document.querySelectorAll('div[style*="z-index: -9999"]');
+                        strayContainers.forEach(c => c.remove());
+                    }
                 } finally {
                     setIsGeneratingZip(false);
                 }
