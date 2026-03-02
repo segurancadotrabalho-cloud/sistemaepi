@@ -625,13 +625,12 @@
                     const zip = new window.JSZip();
                     
                     const hiddenContainer = document.createElement('div');
-                    // Correção: Colocar no topo, mas escondido atrás da interface atual para o html2canvas conseguir ler
                     hiddenContainer.style.position = 'absolute';
                     hiddenContainer.style.top = '0';
                     hiddenContainer.style.left = '0';
                     hiddenContainer.style.width = '210mm'; 
                     hiddenContainer.style.backgroundColor = 'white';
-                    hiddenContainer.style.zIndex = '-9999';
+                    hiddenContainer.style.zIndex = '1';
                     document.body.appendChild(hiddenContainer);
 
                     let count = 0;
@@ -710,7 +709,6 @@
                             </div>
                         `;
 
-                        // Correção vital: Dar tempo ao navegador para renderizar a tabela e desenhar as imagens base64
                         await new Promise(resolve => setTimeout(resolve, 300)); 
 
                         const opt = {
@@ -721,7 +719,6 @@
                             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
                         };
 
-                        // Garantir a saída em blob binário nativo e compatível com JSZip
                         const pdfBlob = await window.html2pdf().set(opt).from(hiddenContainer).output('blob');
                         zip.file(`Ficha_EPI_${emp.name.replace(/[^a-zA-Z0-9À-ú]/g, '_')}.pdf`, pdfBlob);
 
@@ -745,11 +742,8 @@
                 } catch (err) {
                     console.error(err);
                     alert("Erro ao gerar ficheiros: " + err.message);
-                    if (document.getElementById('ficha-epi-content') === null) {
-                        // Limpeza em caso de falha a meio
-                        const strayContainers = document.querySelectorAll('div[style*="z-index: -9999"]');
-                        strayContainers.forEach(c => c.remove());
-                    }
+                    const strayContainers = document.querySelectorAll('div[style*="z-index: 1"]');
+                    strayContainers.forEach(c => c.remove());
                 } finally {
                     setIsGeneratingZip(false);
                 }
@@ -1767,7 +1761,7 @@
                                                         </div>
                                                     )}
 
-                                                    <div id="ficha-epi-content" className="p-10">
+                                                    <div id="ficha-epi-content" className="p-10 bg-white relative">
                                                         <div className="border-b-2 border-slate-900 pb-6 mb-6">
                                                             <div className="flex justify-between items-start mb-6">
                                                                 <div>
@@ -1775,7 +1769,7 @@
                                                                     <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">SEGURANÇA DO TRABALHO</p>
                                                                 </div>
                                                                 <div className="text-right">
-                                                                    <p className="text-xs font-bold text-slate-900 uppercase">{empComp.razao}</p>
+                                                                    <p className="text-xs font-bold text-slate-900 uppercase">${empComp.razao}</p>
                                                                     <p className="text-xs text-slate-500 font-mono">CNPJ: ${empComp.cnpj}</p>
                                                                 </div>
                                                             </div>
